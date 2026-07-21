@@ -1,0 +1,7 @@
+{
+  "id": "sol",
+  "name": "Sol",
+  "version": "0.1.0",
+  "entry": "assets/sol.svg",
+  "supportedStates": ["idle", "thinking", "happy", "busy", "sleeping", "offline"]
+}

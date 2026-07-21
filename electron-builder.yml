@@ -1,0 +1,11 @@
+appId: com.chris.openclaw-pet
+productName: OpenClaw Pet
+directories:
+  output: release
+files:
+  - apps/desktop/dist/**
+  - apps/desktop/package.json
+  - packages/*/dist/**
+win:
+  target:
+    - nsis

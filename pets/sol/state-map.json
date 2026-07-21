@@ -1,0 +1,8 @@
+{
+  "idle": "idle",
+  "thinking": "thinking",
+  "happy": "happy",
+  "busy": "busy",
+  "sleeping": "sleeping",
+  "offline": "offline"
+}

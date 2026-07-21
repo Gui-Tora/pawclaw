@@ -1,0 +1,35 @@
+{
+  "name": "openclaw-pet",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build:packages && npm run build:scripts && npm run build --workspace=@openclaw-pet/desktop",
+    "build:packages": "npm run build --workspace=@openclaw-pet/shared && npm run build --workspace=@openclaw-pet/openclaw-client && npm run build --workspace=@openclaw-pet/pet-engine && npm run build --workspace=@openclaw-pet/pet-sdk && npm run build --workspace=@openclaw-pet/persistence",
+    "build:scripts": "tsc -p tsconfig.scripts.json",
+    "check": "npm run build:packages && npm run typecheck:workspaces && npm run test:unit && npm run validate:pets:files",
+    "dev": "npm run dev --workspace=@openclaw-pet/desktop",
+    "pretest": "npm run build:packages",
+    "test": "npm run test:unit",
+    "test:unit": "node --test --test-isolation=none packages/*/test/*.test.mjs",
+    "pretypecheck": "npm run build:packages",
+    "typecheck": "npm run typecheck:workspaces",
+    "typecheck:workspaces": "npm run typecheck --workspaces --if-present",
+    "prevalidate:pets": "npm run build --workspace=@openclaw-pet/shared && npm run build --workspace=@openclaw-pet/pet-sdk",
+    "validate:pets": "npm run validate:pets:files",
+    "validate:pets:files": "npm run build:scripts && node dist/scripts/validate-pets.js"
+  },
+  "devDependencies": {
+    "@openclaw-pet/pet-sdk": "0.1.0",
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+.npm-cache/
+dist/
+release/
+.vite/
+*.log
+*.local
+settings.json
