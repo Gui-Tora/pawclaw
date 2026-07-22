@@ -5,7 +5,7 @@ export function createSettingsWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 520,
     height: 520,
-    title: 'OpenClaw Pet Settings',
+    title: 'PawClaw Settings',
     webPreferences: {
       preload: join(import.meta.dirname, '../preload.cjs'),
       contextIsolation: true,

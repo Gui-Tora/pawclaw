@@ -1,4 +1,4 @@
-import type { PetEvent, PetMood } from '@openclaw-pet/shared';
+import type { PetEvent, PetMood } from '@pawclaw/shared';
 
 const transitions: Record<PetEvent['type'], PetMood> = {
   'agent:thinking': 'thinking',

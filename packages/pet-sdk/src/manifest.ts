@@ -1,1 +1,1 @@
-export { type PetManifest } from '@openclaw-pet/shared';
+export { type PetManifest } from '@pawclaw/shared';

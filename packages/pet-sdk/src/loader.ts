@@ -1,5 +1,5 @@
 import { validateManifest } from './validation.js';
-import type { PetManifest } from '@openclaw-pet/shared';
+import type { PetManifest } from '@pawclaw/shared';
 
 export function loadManifest(content: string): PetManifest {
   const parsed: unknown = JSON.parse(content);

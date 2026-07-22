@@ -1,7 +1,9 @@
 {
-  "name": "@openclaw-pet/desktop",
+  "name": "@pawclaw/desktop",
   "version": "0.1.0",
   "private": true,
+  "productName": "PawClaw",
+  "description": "Desktop companion for OpenClaw.",
   "type": "module",
   "main": "dist/electron/main.js",
   "scripts": {
@@ -10,9 +12,9 @@
     "typecheck": "tsc -p tsconfig.electron.json --noEmit && tsc -p tsconfig.renderer.json --noEmit"
   },
   "dependencies": {
-    "@openclaw-pet/openclaw-client": "0.1.0",
-    "@openclaw-pet/pet-engine": "0.1.0",
-    "@openclaw-pet/shared": "0.1.0",
+    "@pawclaw/openclaw-client": "0.1.0",
+    "@pawclaw/pet-engine": "0.1.0",
+    "@pawclaw/shared": "0.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

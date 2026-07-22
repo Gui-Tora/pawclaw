@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { PetController } from '@openclaw-pet/pet-engine';
+import { PetController } from '@pawclaw/pet-engine';
 
 const pet = new PetController();
 

@@ -1,5 +1,5 @@
-appId: com.chris.openclaw-pet
-productName: OpenClaw Pet
+appId: com.guitora.pawclaw
+productName: PawClaw
 directories:
   output: release
 files:

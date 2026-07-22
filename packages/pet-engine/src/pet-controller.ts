@@ -1,4 +1,4 @@
-import type { PetEvent, PetMood } from '@openclaw-pet/shared';
+import type { PetEvent, PetMood } from '@pawclaw/shared';
 import { nextPetMood } from './state-machine.js';
 
 export class PetController {

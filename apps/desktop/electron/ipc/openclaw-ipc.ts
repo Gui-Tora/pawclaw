@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { OpenClawConnection } from '@openclaw-pet/openclaw-client';
+import { OpenClawConnection } from '@pawclaw/openclaw-client';
 
 const connection = new OpenClawConnection();
 

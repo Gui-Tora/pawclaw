@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { PetMood } from '@openclaw-pet/shared';
+import type { PetMood } from '@pawclaw/shared';
 import { PetRenderer } from './PetRenderer';
 
 export function PetApp() {

@@ -1,4 +1,4 @@
-import { DEFAULT_GATEWAY_ENDPOINT, type GatewayStatus } from '@openclaw-pet/shared';
+import { DEFAULT_GATEWAY_ENDPOINT, type GatewayStatus } from '@pawclaw/shared';
 
 export class OpenClawConnection {
   constructor(private readonly endpoint = DEFAULT_GATEWAY_ENDPOINT) {}

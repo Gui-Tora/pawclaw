@@ -1,4 +1,4 @@
-import { PET_MOODS, type PetManifest } from '@openclaw-pet/shared';
+import { PET_MOODS, type PetManifest } from '@pawclaw/shared';
 
 const petMoods = new Set<string>(PET_MOODS);
 const identifierPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

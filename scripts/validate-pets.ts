@@ -1,6 +1,6 @@
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
-import { loadManifest } from '@openclaw-pet/pet-sdk';
+import { loadManifest } from '@pawclaw/pet-sdk';
 
 async function main(): Promise<void> {
   const petsDirectory = resolve('pets');

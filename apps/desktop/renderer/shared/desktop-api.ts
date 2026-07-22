@@ -1,4 +1,4 @@
-import type { PetMood } from '@openclaw-pet/shared';
+import type { PetMood } from '@pawclaw/shared';
 
 export interface DesktopApi {
   getPetStatus(): Promise<{ name: string; mood: PetMood }>;

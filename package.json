@@ -1,7 +1,17 @@
 {
-  "name": "openclaw-pet",
+  "name": "pawclaw",
   "private": true,
   "version": "0.1.0",
+  "description": "A privacy-minded, extensible desktop pet for OpenClaw.",
+  "author": "Gui-Tora",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gui-Tora/pawclaw.git"
+  },
+  "homepage": "https://github.com/Gui-Tora/pawclaw#readme",
+  "bugs": {
+    "url": "https://github.com/Gui-Tora/pawclaw/issues"
+  },
   "packageManager": "npm@11.12.1",
   "engines": {
     "node": ">=22.0.0",
@@ -12,23 +22,23 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build:packages && npm run build:scripts && npm run build --workspace=@openclaw-pet/desktop",
-    "build:packages": "npm run build --workspace=@openclaw-pet/shared && npm run build --workspace=@openclaw-pet/openclaw-client && npm run build --workspace=@openclaw-pet/pet-engine && npm run build --workspace=@openclaw-pet/pet-sdk && npm run build --workspace=@openclaw-pet/persistence",
+    "build": "npm run build:packages && npm run build:scripts && npm run build --workspace=@pawclaw/desktop",
+    "build:packages": "npm run build --workspace=@pawclaw/shared && npm run build --workspace=@pawclaw/openclaw-client && npm run build --workspace=@pawclaw/pet-engine && npm run build --workspace=@pawclaw/pet-sdk && npm run build --workspace=@pawclaw/persistence",
     "build:scripts": "tsc -p tsconfig.scripts.json",
     "check": "npm run build:packages && npm run typecheck:workspaces && npm run test:unit && npm run validate:pets:files",
-    "dev": "npm run dev --workspace=@openclaw-pet/desktop",
+    "dev": "npm run dev --workspace=@pawclaw/desktop",
     "pretest": "npm run build:packages",
     "test": "npm run test:unit",
     "test:unit": "node --test --test-isolation=none packages/*/test/*.test.mjs",
     "pretypecheck": "npm run build:packages",
     "typecheck": "npm run typecheck:workspaces",
     "typecheck:workspaces": "npm run typecheck --workspaces --if-present",
-    "prevalidate:pets": "npm run build --workspace=@openclaw-pet/shared && npm run build --workspace=@openclaw-pet/pet-sdk",
+    "prevalidate:pets": "npm run build --workspace=@pawclaw/shared && npm run build --workspace=@pawclaw/pet-sdk",
     "validate:pets": "npm run validate:pets:files",
     "validate:pets:files": "npm run build:scripts && node dist/scripts/validate-pets.js"
   },
   "devDependencies": {
-    "@openclaw-pet/pet-sdk": "0.1.0",
+    "@pawclaw/pet-sdk": "0.1.0",
     "@types/node": "^22.15.3",
     "typescript": "^5.8.3"
   }

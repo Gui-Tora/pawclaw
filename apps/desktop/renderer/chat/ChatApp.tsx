@@ -23,7 +23,7 @@ export function ChatApp() {
   return (
     <main className="panel">
       <header>
-        <strong>Lyn</strong>
+        <strong>PawClaw</strong>
         <span>Desktop chat</span>
       </header>
       <section className="chat-empty">

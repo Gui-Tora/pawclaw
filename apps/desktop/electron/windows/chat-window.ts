@@ -7,7 +7,7 @@ export function createChatWindow(): BrowserWindow {
     height: 640,
     minWidth: 360,
     minHeight: 460,
-    title: 'Lyn',
+    title: 'PawClaw',
     webPreferences: {
       preload: join(import.meta.dirname, '../preload.cjs'),
       contextIsolation: true,

@@ -1,6 +1,8 @@
-# OpenClaw Pet
+# PawClaw
 
-Desktop pet built with Electron, React and TypeScript. The repository is an npm workspace monorepo.
+A privacy-minded, extensible desktop pet for OpenClaw that reacts to agent activity and keeps chat close at hand.
+
+Built with Electron, React and TypeScript as an npm workspace monorepo.
 
 ## Requirements
 
