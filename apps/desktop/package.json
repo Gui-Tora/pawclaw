@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "productName": "PawClaw",
-  "description": "Desktop companion for OpenClaw.",
+  "description": "A local animated desktop companion and chat for OpenClaw.",
   "type": "module",
   "main": "dist/electron/main.js",
   "scripts": {

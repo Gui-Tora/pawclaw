@@ -2,7 +2,7 @@
   "name": "pawclaw",
   "private": true,
   "version": "0.1.0",
-  "description": "A privacy-minded, extensible desktop pet for OpenClaw.",
+  "description": "A local animated desktop companion and chat for OpenClaw.",
   "author": "Gui-Tora",
   "repository": {
     "type": "git",
