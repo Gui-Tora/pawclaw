@@ -16,8 +16,14 @@ export function PetApp() {
   }, []);
 
   return (
-    <main className="pet-shell" onDoubleClick={() => void window.openclawPet.openChat()}>
-      {pet ? <PetRenderer manifest={pet.manifest} mood={pet.mood} /> : <span className="pet-shell__error">{error ?? 'Loading…'}</span>}
+    <main className="pet-shell">
+      {pet ? (
+        <PetRenderer
+          manifest={pet.manifest}
+          mood={pet.mood}
+          onDoubleClick={() => void window.openclawPet.openChat()}
+        />
+      ) : <span className="pet-shell__error">{error ?? 'Loading…'}</span>}
       <button
         aria-label="Open settings"
         className="pet-shell__settings"

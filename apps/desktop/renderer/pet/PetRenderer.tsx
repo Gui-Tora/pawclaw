@@ -15,7 +15,13 @@ function assetUrl(petId: string, source: string): string {
   return `pawclaw-pet://${petId}/${encodedPath}`;
 }
 
-export function PetRenderer({ manifest, mood }: { manifest: PetManifest; mood: PetMood }) {
+interface PetRendererProps {
+  manifest: PetManifest;
+  mood: PetMood;
+  onDoubleClick(): void;
+}
+
+export function PetRenderer({ manifest, mood, onDoubleClick }: PetRendererProps) {
   const state = moodAnimations[mood];
   const animation = manifest.animations[state] ?? manifest.animations.idle;
   const [frame, setFrame] = useState(0);
@@ -50,6 +56,7 @@ export function PetRenderer({ manifest, mood }: { manifest: PetManifest; mood: P
     <div
       aria-label={`${manifest.name} is ${mood}`}
       className="pet-sprite"
+      onDoubleClick={onDoubleClick}
       role="img"
       style={{ width: frameWidth, height: frameHeight }}
     >
