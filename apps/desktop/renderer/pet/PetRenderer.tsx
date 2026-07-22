@@ -1,14 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import type { PetAnimationState, PetManifest, PetMood } from '@pawclaw/shared';
-
-const moodAnimations: Record<PetMood, PetAnimationState> = {
-  idle: 'idle',
-  thinking: 'think',
-  happy: 'talk',
-  busy: 'walk',
-  sleeping: 'sleep',
-  offline: 'alert'
-};
+import { animationForMood } from '@pawclaw/pet-engine';
+import type { PetManifest, PetMood } from '@pawclaw/shared';
 
 function assetUrl(petId: string, source: string): string {
   const encodedPath = source.split('/').map(encodeURIComponent).join('/');
@@ -22,7 +14,7 @@ interface PetRendererProps {
 }
 
 export function PetRenderer({ manifest, mood, onDoubleClick }: PetRendererProps) {
-  const state = moodAnimations[mood];
+  const state = animationForMood(mood);
   const animation = manifest.animations[state] ?? manifest.animations.idle;
   const [frame, setFrame] = useState(0);
   const [failed, setFailed] = useState(false);

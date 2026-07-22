@@ -2,6 +2,7 @@ import type { PetManifest, PetMood } from '@pawclaw/shared';
 
 export interface DesktopApi {
   getPetStatus(): Promise<{ manifest: PetManifest; mood: PetMood }>;
+  onPetMoodChanged(listener: (mood: PetMood) => void): () => void;
   getGatewayStatus(): Promise<{ connected: boolean; endpoint: string; detail?: string }>;
   getSettings(): Promise<{ activePetId: string; alwaysOnTop: boolean }>;
   sendChat(content: string): Promise<{ accepted: boolean; reason?: string }>;

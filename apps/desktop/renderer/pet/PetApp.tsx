@@ -12,7 +12,10 @@ export function PetApp() {
       .catch((reason: unknown) => {
         if (active) setError(reason instanceof Error ? reason.message : 'Pet could not be loaded');
       });
-    return () => { active = false; };
+    const unsubscribe = window.openclawPet.onPetMoodChanged((mood) => {
+      if (active) setPet((current) => current ? { ...current, mood } : current);
+    });
+    return () => { active = false; unsubscribe(); };
   }, []);
 
   return (

@@ -2,6 +2,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('openclawPet', {
   getPetStatus: () => ipcRenderer.invoke('pet:status'),
+  onPetMoodChanged: (listener: (mood: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, mood: string) => listener(mood);
+    ipcRenderer.on('pet:mood-changed', handler);
+    return () => ipcRenderer.removeListener('pet:mood-changed', handler);
+  },
   getGatewayStatus: () => ipcRenderer.invoke('openclaw:status'),
   getSettings: () => ipcRenderer.invoke('settings:read'),
   sendChat: (content: string) => ipcRenderer.invoke('chat:send', content),

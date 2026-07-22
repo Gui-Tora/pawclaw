@@ -31,6 +31,7 @@ export interface ChatMessage {
 }
 
 type ChatEventListener = () => void;
+type StatusEventListener = (status: GatewayStatus) => void;
 
 function resolveGatewayToken(): string | undefined {
   if (process.env.OPENCLAW_GATEWAY_TOKEN) return process.env.OPENCLAW_GATEWAY_TOKEN;
@@ -57,6 +58,7 @@ export class OpenClawConnection {
     timeout: ReturnType<typeof setTimeout>;
   }>();
   private readonly chatEventListeners = new Set<ChatEventListener>();
+  private readonly statusEventListeners = new Set<StatusEventListener>();
 
   constructor(endpoint = process.env.OPENCLAW_GATEWAY_URL ?? DEFAULT_GATEWAY_ENDPOINT, sessionKey = process.env.PAWCLAW_SESSION_KEY ?? DEFAULT_GATEWAY_SESSION_KEY) {
     this.endpoint = endpoint;
@@ -117,6 +119,7 @@ export class OpenClawConnection {
           }).then(() => {
             this.connected = true;
             this.detail = `Connected to Lyn (${this.sessionKey})`;
+            this.emitStatusUpdate();
             finish();
           }).catch((error: unknown) => {
             this.detail = error instanceof Error ? error.message : 'Gateway authentication failed';
@@ -153,6 +156,7 @@ export class OpenClawConnection {
         this.pending.clear();
         if (this.connecting) finish(new Error('Gateway connection closed before authentication completed'));
         else if (wasConnected) this.detail = 'Gateway connection closed';
+        this.emitStatusUpdate();
       };
     });
     return this.connecting;
@@ -183,8 +187,18 @@ export class OpenClawConnection {
     return () => this.chatEventListeners.delete(listener);
   }
 
+  onStatusChange(listener: StatusEventListener): () => void {
+    this.statusEventListeners.add(listener);
+    return () => this.statusEventListeners.delete(listener);
+  }
+
   private emitChatUpdate(): void {
     for (const listener of this.chatEventListeners) listener();
+  }
+
+  private emitStatusUpdate(): void {
+    const status = this.status();
+    for (const listener of this.statusEventListeners) listener(status);
   }
 
   private isChatUpdate(frame: GatewayFrame): boolean {

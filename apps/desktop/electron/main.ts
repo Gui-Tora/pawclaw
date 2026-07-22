@@ -4,7 +4,7 @@ import { createPetWindow } from './windows/pet-window.js';
 import { createSettingsWindow } from './windows/settings-window.js';
 import { registerChatIpc } from './ipc/chat-ipc.js';
 import { registerOpenClawIpc } from './ipc/openclaw-ipc.js';
-import { registerPetIpc } from './ipc/pet-ipc.js';
+import { dispatchPetEvent, registerPetIpc } from './ipc/pet-ipc.js';
 import { registerSettingsIpc } from './ipc/settings-ipc.js';
 import { registerPetAssetProtocol } from './pets/pet-protocol.js';
 
@@ -17,6 +17,7 @@ let chatWindow: BrowserWindow | undefined;
 let settingsWindow: BrowserWindow | undefined;
 
 function showChat(): void {
+  dispatchPetEvent({ type: 'user:open-chat' });
   if (!chatWindow || chatWindow.isDestroyed()) chatWindow = createChatWindow();
   chatWindow.show();
   chatWindow.focus();
