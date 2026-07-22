@@ -30,8 +30,8 @@ function showSettings(): void {
 
 void app.whenReady().then(() => {
   registerPetAssetProtocol();
-  registerChatIpc();
   registerOpenClawIpc();
+  registerChatIpc();
   registerPetIpc();
   registerSettingsIpc();
   ipcMain.handle('window:open-chat', showChat);
