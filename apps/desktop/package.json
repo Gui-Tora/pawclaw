@@ -6,7 +6,7 @@
   "main": "dist/electron/main.js",
   "scripts": {
     "build": "vite build && tsc -p tsconfig.electron.json",
-    "dev": "npm --prefix ../.. run build && electron .",
+    "dev": "npm --prefix ../.. run build && set ELECTRON_RUN_AS_NODE=&& electron .",
     "typecheck": "tsc -p tsconfig.electron.json --noEmit && tsc -p tsconfig.renderer.json --noEmit"
   },
   "dependencies": {

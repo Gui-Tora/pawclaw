@@ -1,6 +1,7 @@
-:root { color: #17212b; font-family: Inter, system-ui, sans-serif; background: #f6f7f4; }
+html, body, #root { min-height: 100%; }
+:root { color: #17212b; font-family: Inter, system-ui, sans-serif; background: transparent; }
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100vh; }
+body { margin: 0; min-height: 100vh; background: transparent; }
 button, input { font: inherit; }
 button:disabled { cursor: not-allowed; opacity: .55; }
 .pet-shell { height: 100vh; display: grid; place-items: center; position: relative; -webkit-app-region: drag; }
@@ -9,4 +10,4 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .pet__ear { position: absolute; width: 28px; height: 33px; background: inherit; border: 3px solid #17212b; top: -18px; z-index: -1; }.pet__ear--left { left: 8px; transform: rotate(-28deg); }.pet__ear--right { right: 8px; transform: rotate(28deg); }
 .pet__eyes { letter-spacing: 19px; margin-left: 17px; font-size: 33px; line-height: 1; transform: translateY(-8px); }.pet__eyes::after { content: '⌣'; display: block; letter-spacing: 0; font-size: 24px; transform: translateX(-12px) translateY(-7px); }
 .pet-shell__label { margin-top: 134px; font-weight: 700; }.pet-shell__settings { position: absolute; right: 14px; top: 14px; border: 0; background: transparent; cursor: pointer; -webkit-app-region: no-drag; }
-.panel { min-height: 100vh; padding: 20px; display: grid; grid-template-rows: auto 1fr auto auto; gap: 16px; }.panel header { display: flex; flex-direction: column; gap: 2px; }.panel header span, .muted, small { color: #62707c; }.chat-empty { border: 1px solid #d4d9dc; display: grid; place-items: center; color: #62707c; padding: 20px; }.panel form { display: flex; gap: 8px; }.panel input { flex: 1; min-width: 0; padding: 10px; border: 1px solid #aeb7bd; border-radius: 4px; }.panel button { background: #17212b; color: #fff; border: 0; border-radius: 4px; padding: 10px 14px; cursor: pointer; }.setting { display: grid; gap: 5px; padding: 12px 0; border-bottom: 1px solid #d4d9dc; }.setting label { font-weight: 700; }.setting output { color: #62707c; }
+.panel { min-height: 100vh; padding: 20px; display: grid; grid-template-rows: auto 1fr auto auto; gap: 16px; background: #f6f7f4; }.panel header { display: flex; flex-direction: column; gap: 2px; }.panel header span, .muted, small { color: #62707c; }.chat-empty { border: 1px solid #d4d9dc; display: grid; place-items: center; color: #62707c; padding: 20px; }.panel form { display: flex; gap: 8px; }.panel input { flex: 1; min-width: 0; padding: 10px; border: 1px solid #aeb7bd; border-radius: 4px; }.panel button { background: #17212b; color: #fff; border: 0; border-radius: 4px; padding: 10px 14px; cursor: pointer; }.setting { display: grid; gap: 5px; padding: 12px 0; border-bottom: 1px solid #d4d9dc; }.setting label { font-weight: 700; }.setting output { color: #62707c; }

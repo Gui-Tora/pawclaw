@@ -7,7 +7,7 @@ export function createSettingsWindow(): BrowserWindow {
     height: 520,
     title: 'OpenClaw Pet Settings',
     webPreferences: {
-      preload: join(import.meta.dirname, '../preload.js'),
+      preload: join(import.meta.dirname, '../preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true

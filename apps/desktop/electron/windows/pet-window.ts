@@ -7,10 +7,11 @@ export function createPetWindow(): BrowserWindow {
     height: 180,
     frame: false,
     transparent: true,
+    backgroundColor: '#00000000',
     resizable: false,
     alwaysOnTop: true,
     webPreferences: {
-      preload: join(import.meta.dirname, '../preload.js'),
+      preload: join(import.meta.dirname, '../preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true

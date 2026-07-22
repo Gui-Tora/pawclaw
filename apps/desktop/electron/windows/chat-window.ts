@@ -9,7 +9,7 @@ export function createChatWindow(): BrowserWindow {
     minHeight: 460,
     title: 'Lyn',
     webPreferences: {
-      preload: join(import.meta.dirname, '../preload.js'),
+      preload: join(import.meta.dirname, '../preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
