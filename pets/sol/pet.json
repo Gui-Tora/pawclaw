@@ -4,15 +4,63 @@
   "species": "cat",
   "scale": 1,
   "enabled": true,
-  "preview": "assets/sol.svg",
+  "preview": "preview.png",
   "animations": {
     "idle": {
-      "src": "assets/sol.svg",
+      "src": "sprites/idle.png",
       "frameWidth": 128,
       "frameHeight": 128,
-      "frames": 1,
-      "fps": 1,
+      "frames": 4,
+      "fps": 3,
       "loop": true
+    },
+    "walk": {
+      "src": "sprites/walk.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": 4,
+      "fps": 6,
+      "loop": true
+    },
+    "sleep": {
+      "src": "sprites/sleep.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": 4,
+      "fps": 2,
+      "loop": true
+    },
+    "think": {
+      "src": "sprites/think.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": 4,
+      "fps": 3,
+      "loop": true
+    },
+    "talk": {
+      "src": "sprites/talk.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": 4,
+      "fps": 8,
+      "loop": true
+    },
+    "celebrate": {
+      "src": "sprites/celebrate.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": 4,
+      "fps": 6,
+      "loop": false
+    },
+    "alert": {
+      "src": "sprites/alert.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": 4,
+      "fps": 6,
+      "loop": false
     }
   }
 }
