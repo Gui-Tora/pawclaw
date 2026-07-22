@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol } from 'electron';
 import { createChatWindow } from './windows/chat-window.js';
 import { createPetWindow } from './windows/pet-window.js';
 import { createSettingsWindow } from './windows/settings-window.js';
@@ -6,6 +6,11 @@ import { registerChatIpc } from './ipc/chat-ipc.js';
 import { registerOpenClawIpc } from './ipc/openclaw-ipc.js';
 import { registerPetIpc } from './ipc/pet-ipc.js';
 import { registerSettingsIpc } from './ipc/settings-ipc.js';
+import { registerPetAssetProtocol } from './pets/pet-protocol.js';
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'pawclaw-pet', privileges: { secure: true, standard: true, supportFetchAPI: true } }
+]);
 
 let petWindow: BrowserWindow | undefined;
 let chatWindow: BrowserWindow | undefined;
@@ -24,6 +29,7 @@ function showSettings(): void {
 }
 
 void app.whenReady().then(() => {
+  registerPetAssetProtocol();
   registerChatIpc();
   registerOpenClawIpc();
   registerPetIpc();

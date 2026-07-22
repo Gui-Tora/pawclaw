@@ -1,7 +1,7 @@
-import type { PetMood } from '@pawclaw/shared';
+import type { PetManifest, PetMood } from '@pawclaw/shared';
 
 export interface DesktopApi {
-  getPetStatus(): Promise<{ name: string; mood: PetMood }>;
+  getPetStatus(): Promise<{ manifest: PetManifest; mood: PetMood }>;
   getGatewayStatus(): Promise<{ connected: boolean; endpoint: string; detail?: string }>;
   getSettings(): Promise<{ activePetId: string; alwaysOnTop: boolean }>;
   sendChat(content: string): Promise<{ accepted: boolean; reason?: string }>;

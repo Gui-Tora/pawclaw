@@ -6,6 +6,9 @@ files:
   - apps/desktop/dist/**
   - apps/desktop/package.json
   - packages/*/dist/**
+extraResources:
+  - from: pets
+    to: pets
 win:
   target:
     - nsis

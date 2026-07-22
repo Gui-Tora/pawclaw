@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react';
-import type { PetMood } from '@pawclaw/shared';
+import type { PetManifest, PetMood } from '@pawclaw/shared';
 import { PetRenderer } from './PetRenderer';
 
 export function PetApp() {
-  const [mood, setMood] = useState<PetMood>('offline');
+  const [pet, setPet] = useState<{ manifest: PetManifest; mood: PetMood }>();
+  const [error, setError] = useState<string>();
   useEffect(() => {
     let active = true;
     window.openclawPet.getPetStatus()
-      .then((pet) => { if (active) setMood(pet.mood); })
-      .catch(() => { if (active) setMood('offline'); });
+      .then((status) => { if (active) setPet(status); })
+      .catch((reason: unknown) => {
+        if (active) setError(reason instanceof Error ? reason.message : 'Pet could not be loaded');
+      });
     return () => { active = false; };
   }, []);
 
   return (
     <main className="pet-shell" onDoubleClick={() => void window.openclawPet.openChat()}>
-      <PetRenderer mood={mood} />
+      {pet ? <PetRenderer manifest={pet.manifest} mood={pet.mood} /> : <span className="pet-shell__error">{error ?? 'Loading…'}</span>}
       <button
         aria-label="Open settings"
         className="pet-shell__settings"
@@ -23,7 +26,7 @@ export function PetApp() {
       >
         ⚙
       </button>
-      <span className="pet-shell__label">Sol</span>
+      <span className="pet-shell__label">{pet?.manifest.name ?? 'PawClaw'}</span>
     </main>
   );
 }

@@ -1,0 +1,18 @@
+{
+  "id": "sol",
+  "name": "Sol",
+  "species": "cat",
+  "scale": 1,
+  "enabled": true,
+  "preview": "assets/sol.svg",
+  "animations": {
+    "idle": {
+      "src": "assets/sol.svg",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": 1,
+      "fps": 1,
+      "loop": true
+    }
+  }
+}

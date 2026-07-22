@@ -1,0 +1,40 @@
+{
+  "id": "ember",
+  "name": "Ember",
+  "species": "comodo-dragon",
+  "scale": 4,
+  "enabled": false,
+  "preview": "preview.png",
+  "attribution": {
+    "creator": "Originum",
+    "source": "https://originum.itch.io/comodo-dragon",
+    "license": "Free to use in projects with credit to Originum",
+    "required": true
+  },
+  "animations": {
+    "idle": {
+      "src": "sprites/idle.png",
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "frames": 4,
+      "fps": 4,
+      "loop": true
+    },
+    "walk": {
+      "src": "sprites/walk.png",
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "frames": 6,
+      "fps": 10,
+      "loop": true
+    },
+    "alert": {
+      "src": "sprites/alert.png",
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "frames": 5,
+      "fps": 8,
+      "loop": false
+    }
+  }
+}

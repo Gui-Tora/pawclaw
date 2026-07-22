@@ -27,6 +27,7 @@
     "build:scripts": "tsc -p tsconfig.scripts.json",
     "check": "npm run build:packages && npm run typecheck:workspaces && npm run test:unit && npm run validate:pets:files",
     "dev": "npm run dev --workspace=@pawclaw/desktop",
+    "import:ember": "powershell -NoProfile -File scripts/import-originum-comodo.ps1",
     "pretest": "npm run build:packages",
     "test": "npm run test:unit",
     "test:unit": "node --test --test-isolation=none packages/*/test/*.test.mjs",
