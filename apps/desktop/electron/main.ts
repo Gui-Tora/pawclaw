@@ -1,17 +1,27 @@
 import { app, BrowserWindow, dialog, ipcMain, powerMonitor, protocol } from 'electron';
 import { registerChatIpc } from './ipc/chat-ipc.js';
 import { connection, registerOpenClawIpc } from './ipc/openclaw-ipc.js';
-import { dispatchPetEvent, registerPetIpc } from './ipc/pet-ipc.js';
+import {
+  broadcastPetMotion,
+  getPetMood,
+  onPetMoodChanged,
+  registerPetIpc,
+  setPetMotionStateProvider,
+  dispatchPetEvent
+} from './ipc/pet-ipc.js';
 import { registerSettingsIpc } from './ipc/settings-ipc.js';
+import { getActivePetManifest } from './pets/pet-files.js';
 import { registerPetAssetProtocol } from './pets/pet-protocol.js';
-import { readAppSettings } from './settings/app-settings.js';
+import { readAppSettings, updateAppSettings } from './settings/app-settings.js';
 import { createTrayApp, type TrayApp } from './tray/tray-app.js';
 import { createFlyoutWindow, positionFlyout } from './windows/flyout-window.js';
 import {
   applyPetAlwaysOnTop,
+  applyPetWindowShape,
   createPetWindow,
   reinforcePetAlwaysOnTop
 } from './windows/pet-window.js';
+import { PetMotionController } from './windows/pet-motion-controller.js';
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'pawclaw-pet', privileges: { secure: true, standard: true, supportFetchAPI: true } }
@@ -21,11 +31,29 @@ let flyoutWindow: BrowserWindow | undefined;
 let flyoutHiddenAt = 0;
 let petWindow: BrowserWindow | undefined;
 let petWindowPromise: Promise<BrowserWindow> | undefined;
+let petMotion: PetMotionController | undefined;
 let trayApp: TrayApp | undefined;
 let quitting = false;
+let shapeRefreshRequest = 0;
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) app.quit();
+
+function broadcastSettingsChanged(): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send('settings:changed');
+  }
+}
+
+async function refreshPetWindowShape(): Promise<void> {
+  const window = petWindow;
+  if (!window || window.isDestroyed()) return;
+  const request = ++shapeRefreshRequest;
+  const settings = await readAppSettings();
+  const manifest = await getActivePetManifest(settings.activePetId);
+  if (request !== shapeRefreshRequest || petWindow !== window || window.isDestroyed()) return;
+  applyPetWindowShape(window, manifest, settings.petCalibrations[manifest.id]);
+}
 
 function ensureFlyoutWindow(): BrowserWindow {
   if (!flyoutWindow || flyoutWindow.isDestroyed()) {
@@ -50,10 +78,27 @@ async function ensurePetWindow(): Promise<BrowserWindow> {
     petWindowPromise = (async () => {
       const settings = await readAppSettings();
       const window = createPetWindow(settings.alwaysOnTop);
+      const manifest = await getActivePetManifest(settings.activePetId);
+      applyPetWindowShape(window, manifest, settings.petCalibrations[manifest.id]);
       window.on('closed', () => {
         if (petWindow === window) petWindow = undefined;
+        if (petMotion) {
+          petMotion.destroy();
+          petMotion = undefined;
+        }
       });
       petWindow = window;
+      petMotion = new PetMotionController(
+        window,
+        settings.motionMode,
+        getPetMood(),
+        broadcastPetMotion,
+        () => {
+          void updateAppSettings({ motionMode: 'manual' })
+            .then(() => broadcastSettingsChanged())
+            .catch((error: unknown) => console.error('[pawclaw] could not persist manual movement', error));
+        }
+      );
       return window;
     })().finally(() => {
       petWindowPromise = undefined;
@@ -102,11 +147,21 @@ if (hasSingleInstanceLock) {
     registerOpenClawIpc();
     registerChatIpc();
     registerPetIpc();
+    setPetMotionStateProvider(() => petMotion?.state ?? {
+      mode: 'manual',
+      locomotion: 'stationary',
+      direction: 'right'
+    });
+    onPetMoodChanged((mood) => petMotion?.setMood(mood));
     registerSettingsIpc((settings, previous) => {
       if (settings.activePetId !== previous.activePetId) void trayApp?.refresh();
       if (settings.alwaysOnTop !== previous.alwaysOnTop && petWindow) {
         applyPetAlwaysOnTop(petWindow, settings.alwaysOnTop);
       }
+      if (settings.motionMode !== previous.motionMode) {
+        petMotion?.setMode(settings.motionMode);
+      }
+      void refreshPetWindowShape();
     });
     ipcMain.handle('window:open-chat', () => showFlyout('chat'));
     ipcMain.handle('window:hide', () => {
@@ -132,9 +187,11 @@ if (hasSingleInstanceLock) {
     });
     powerMonitor.on('resume', () => {
       if (petWindow) reinforcePetAlwaysOnTop(petWindow);
+      petMotion?.refresh();
     });
     powerMonitor.on('unlock-screen', () => {
       if (petWindow) reinforcePetAlwaysOnTop(petWindow);
+      petMotion?.refresh();
     });
   }).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);

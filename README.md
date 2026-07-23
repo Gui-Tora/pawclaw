@@ -18,6 +18,7 @@ PawClaw is a local, privacy-minded desktop companion for [OpenClaw](https://open
 - **A native tray app.** Left-click toggles the flyout; right-click opens quick actions for chat, settings, and exit. PawClaw stays out of the taskbar.
 - **Local by design.** PawClaw connects directly to your local OpenClaw Gateway. The Gateway token remains in Electron's main process and is never exposed to the renderer.
 - **Pixel-art pets.** Pets are manifest-based, so adding a character does not require changing the application. Sol ships with idle, walk, sleep, think, talk, celebrate, and alert animations.
+- **Taskbar walks.** On a visible bottom taskbar, pets can patrol the reserved desktop shelf, pause for reactions, and return to manual mode when dragged.
 - **Built to extend.** Electron + React + TypeScript in a small npm-workspace monorepo, with a separate pet engine and SDK.
 
 ## Quick start
