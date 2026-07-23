@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, powerMonitor, protocol } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, powerMonitor, protocol } from 'electron';
 import { registerChatIpc } from './ipc/chat-ipc.js';
 import { connection, registerOpenClawIpc } from './ipc/openclaw-ipc.js';
 import { dispatchPetEvent, registerPetIpc } from './ipc/pet-ipc.js';
@@ -18,7 +18,9 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 let flyoutWindow: BrowserWindow | undefined;
+let flyoutHiddenAt = 0;
 let petWindow: BrowserWindow | undefined;
+let petWindowPromise: Promise<BrowserWindow> | undefined;
 let trayApp: TrayApp | undefined;
 let quitting = false;
 
@@ -28,6 +30,9 @@ if (!hasSingleInstanceLock) app.quit();
 function ensureFlyoutWindow(): BrowserWindow {
   if (!flyoutWindow || flyoutWindow.isDestroyed()) {
     flyoutWindow = createFlyoutWindow();
+    flyoutWindow.on('hide', () => {
+      flyoutHiddenAt = Date.now();
+    });
     flyoutWindow.on('close', (event) => {
       if (quitting) return;
       event.preventDefault();
@@ -38,18 +43,29 @@ function ensureFlyoutWindow(): BrowserWindow {
 }
 
 async function ensurePetWindow(): Promise<BrowserWindow> {
-  if (!petWindow || petWindow.isDestroyed()) {
-    const settings = await readAppSettings();
-    petWindow = createPetWindow(settings.alwaysOnTop);
-    petWindow.on('closed', () => {
-      petWindow = undefined;
+  if (petWindow && !petWindow.isDestroyed()) return petWindow;
+  // Cache the in-flight creation so concurrent callers (whenReady + activate)
+  // cannot race past the check above and spawn duplicate pet windows.
+  if (!petWindowPromise) {
+    petWindowPromise = (async () => {
+      const settings = await readAppSettings();
+      const window = createPetWindow(settings.alwaysOnTop);
+      window.on('closed', () => {
+        if (petWindow === window) petWindow = undefined;
+      });
+      petWindow = window;
+      return window;
+    })().finally(() => {
+      petWindowPromise = undefined;
     });
   }
-  return petWindow;
+  return petWindowPromise;
 }
 
+let pendingReveal: (() => void) | undefined;
+
 function showFlyout(view: 'chat' | 'settings'): void {
-  dispatchPetEvent({ type: 'user:open-chat' });
+  if (view === 'chat') dispatchPetEvent({ type: 'user:open-chat' });
   const window = ensureFlyoutWindow();
   if (trayApp) positionFlyout(window, trayApp.tray.getBounds());
 
@@ -61,14 +77,24 @@ function showFlyout(view: 'chat' | 'settings'): void {
     window.focus();
   };
   if (window.webContents.isLoadingMainFrame()) {
-    window.webContents.once('did-finish-load', reveal);
+    // Collapse rapid repeat opens into a single reveal with the latest view.
+    const firstQueued = !pendingReveal;
+    pendingReveal = reveal;
+    if (firstQueued) {
+      window.webContents.once('did-finish-load', () => {
+        pendingReveal?.();
+        pendingReveal = undefined;
+      });
+    }
   } else {
     reveal();
   }
 }
 
 if (hasSingleInstanceLock) {
-  app.on('second-instance', () => showFlyout('chat'));
+  app.on('second-instance', () => {
+    if (app.isReady()) showFlyout('chat');
+  });
 
   void app.whenReady().then(async () => {
     app.setAppUserModelId('com.guitora.pawclaw');
@@ -84,15 +110,24 @@ if (hasSingleInstanceLock) {
     });
     ipcMain.handle('window:open-chat', () => showFlyout('chat'));
     ipcMain.handle('window:open-settings', () => showFlyout('settings'));
-    ipcMain.handle('window:hide', () => flyoutWindow?.hide());
+    ipcMain.handle('window:hide', () => {
+      if (flyoutWindow && !flyoutWindow.isDestroyed()) flyoutWindow.hide();
+    });
 
     ensureFlyoutWindow();
-    trayApp = await createTrayApp({
-      getWindow: () => flyoutWindow,
-      show: showFlyout,
-      quit: () => app.quit()
-    });
+    // The pet window must not depend on tray creation succeeding: a broken
+    // tray icon should never leave the app running headless.
     await ensurePetWindow();
+    try {
+      trayApp = await createTrayApp({
+        getWindow: () => flyoutWindow,
+        wasRecentlyHidden: () => Date.now() - flyoutHiddenAt < 250,
+        show: showFlyout,
+        quit: () => app.quit()
+      });
+    } catch (error) {
+      console.error('[pawclaw] tray creation failed; continuing without tray', error);
+    }
     connection.onStatusChange(() => {
       void trayApp?.refreshTooltip();
     });
@@ -102,6 +137,11 @@ if (hasSingleInstanceLock) {
     powerMonitor.on('unlock-screen', () => {
       if (petWindow) reinforcePetAlwaysOnTop(petWindow);
     });
+  }).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[pawclaw] fatal startup error', error);
+    dialog.showErrorBox('PawClaw no pudo iniciarse', message);
+    app.quit();
   });
 
   app.on('activate', () => {

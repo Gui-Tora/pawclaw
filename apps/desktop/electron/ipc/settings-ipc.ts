@@ -40,8 +40,9 @@ export function registerSettingsIpc(
     }
     if (Object.keys(patch).length === 0) throw new Error('No supported settings supplied');
 
-    const previous = await readAppSettings();
-    const settings = await updateAppSettings(patch);
+    // previous comes from inside the store's write queue, so concurrent
+    // updates can never observe a stale snapshot and skip the change hooks.
+    const { previous, settings } = await updateAppSettings(patch);
     if (settings.activePetId !== previous.activePetId) {
       broadcastPetChanged();
     }

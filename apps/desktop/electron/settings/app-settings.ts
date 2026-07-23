@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import { join } from 'node:path';
-import { SettingsStore, type PetSettings } from '@pawclaw/persistence';
+import { SettingsStore, type PetSettings, type SettingsUpdateResult } from '@pawclaw/persistence';
 
 let store: SettingsStore | undefined;
 
@@ -13,6 +13,6 @@ export function readAppSettings(): Promise<PetSettings> {
   return getStore().read();
 }
 
-export function updateAppSettings(patch: Partial<PetSettings>): Promise<PetSettings> {
-  return getStore().update(patch);
+export function updateAppSettings(patch: Partial<PetSettings>): Promise<SettingsUpdateResult> {
+  return getStore().applyUpdate(patch);
 }

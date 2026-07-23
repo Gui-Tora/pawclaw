@@ -1,4 +1,9 @@
 import type { PetManifest, PetMood } from '@pawclaw/shared';
+// Single source of truth for the shapes that cross the IPC boundary: a
+// hand-rolled copy here already drifted once from the real client types.
+import type { AgentIdentity, ChatMessage, ChatSendResult, ChatUpdate } from '@pawclaw/openclaw-client';
+
+export type { AgentIdentity, ChatUpdate };
 
 export interface PetOption {
   id: string;
@@ -13,25 +18,6 @@ export interface SettingsSnapshot {
   pets: PetOption[];
 }
 
-export interface AgentIdentity {
-  agentId: string;
-  name: string;
-  avatar?: string;
-  emoji?: string;
-}
-
-export type ChatUpdate =
-  | { type: 'delta'; runId: string; content: string; timestamp: number }
-  | { type: 'commentary'; runId: string; itemId?: string; content: string; timestamp: number }
-  | {
-      type: 'final' | 'aborted' | 'error';
-      runId: string;
-      message?: { id: string; role: 'user' | 'assistant'; content: string; timestamp?: number };
-      reason?: string;
-      timestamp: number;
-    }
-  | { type: 'history'; timestamp: number };
-
 export interface DesktopApi {
   getPetStatus(): Promise<{ manifest: PetManifest; mood: PetMood }>;
   onPetMoodChanged(listener: (mood: PetMood) => void): () => void;
@@ -45,8 +31,8 @@ export interface DesktopApi {
   updateSettings(
     patch: Partial<Pick<SettingsSnapshot, 'activePetId' | 'alwaysOnTop'>>
   ): Promise<SettingsSnapshot>;
-  sendChat(content: string): Promise<{ accepted: boolean; runId?: string; reason?: string }>;
-  getChatHistory(): Promise<Array<{ id: string; role: 'user' | 'assistant'; content: string; timestamp?: number }>>;
+  sendChat(content: string): Promise<ChatSendResult>;
+  getChatHistory(): Promise<ChatMessage[]>;
   onChatUpdated(listener: (update: ChatUpdate) => void): () => void;
   openChat(): Promise<void>;
   openSettings(): Promise<void>;

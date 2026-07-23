@@ -1,3 +1,3 @@
 export const DEFAULT_GATEWAY_ENDPOINT = 'ws://127.0.0.1:18789';
 export const DEFAULT_GATEWAY_SESSION_KEY = 'agent:main:main';
-export const DEFAULT_PET_ID = 'ember';
+export const DEFAULT_PET_ID = 'sol';

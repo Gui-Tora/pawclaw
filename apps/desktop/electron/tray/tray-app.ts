@@ -13,6 +13,11 @@ interface TrayAppOptions {
   show(view: 'chat' | 'settings'): void;
   quit(): void;
   getWindow(): BrowserWindow | undefined;
+  /**
+   * True when the flyout was hidden moments ago. A tray click first blurs the
+   * flyout (hiding it) and then fires `click`, which would otherwise reopen it.
+   */
+  wasRecentlyHidden(): boolean;
 }
 
 async function activePetImage(): Promise<NativeImage> {
@@ -35,8 +40,18 @@ async function activePetImage(): Promise<NativeImage> {
   return image.resize({ width: 32, height: 32, quality: 'best' });
 }
 
+async function trayImage(): Promise<NativeImage> {
+  try {
+    return await activePetImage();
+  } catch (error) {
+    // A broken pet asset must not take down the tray (and with it the app UI).
+    console.error('[pawclaw] tray icon failed to load; using blank icon', error);
+    return nativeImage.createEmpty();
+  }
+}
+
 export async function createTrayApp(options: TrayAppOptions): Promise<TrayApp> {
-  const tray = new Tray(await activePetImage());
+  const tray = new Tray(await trayImage());
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Abrir chat', click: () => options.show('chat') },
     { label: 'Ajustes', click: () => options.show('settings') },
@@ -45,14 +60,14 @@ export async function createTrayApp(options: TrayAppOptions): Promise<TrayApp> {
   ]));
   tray.on('click', () => {
     const window = options.getWindow();
-    if (window?.isVisible()) window.hide();
-    else options.show('chat');
+    if (window && !window.isDestroyed() && window.isVisible()) window.hide();
+    else if (!options.wasRecentlyHidden()) options.show('chat');
   });
 
   const api: TrayApp = {
     tray,
     async refresh() {
-      tray.setImage(await activePetImage());
+      tray.setImage(await trayImage());
       await api.refreshTooltip();
     },
     async refreshTooltip() {

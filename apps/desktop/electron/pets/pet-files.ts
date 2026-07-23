@@ -4,7 +4,7 @@ import { isAbsolute, join, relative, resolve } from 'node:path';
 import { DEFAULT_PET_ID, type PetManifest } from '@pawclaw/shared';
 import { loadManifest } from '@pawclaw/pet-sdk';
 
-const fallbackPetId = 'sol';
+const fallbackPetId = DEFAULT_PET_ID;
 const petIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export interface AvailablePet {

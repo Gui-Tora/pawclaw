@@ -12,11 +12,19 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+function isBoundedString(value: unknown, maxLength: number): value is string {
+  return isNonEmptyString(value) && value.length <= maxLength;
+}
+
 export function isSafePetPath(value: unknown): value is string {
-  if (!isNonEmptyString(value) || value.includes('\0') || /^[A-Za-z]:[\\/]/.test(value)) return false;
-  const normalized = value.replace(/\\/g, '/');
-  return !normalized.startsWith('/')
-    && normalized.split('/').every((segment) => segment !== '..' && segment !== '.' && segment !== '');
+  // `D:file` (drive-relative, no separator) resolves outside the pet
+  // directory too, so reject any drive prefix — not just `D:\`/`D:/`.
+  if (!isBoundedString(value, 1024) || value.includes('\0') || /^[A-Za-z]:/.test(value)) return false;
+  // Backslash separators pass a naive check but the renderer builds URLs by
+  // splitting on '/' only, so `sprites\idle.png` would 404 at runtime.
+  if (value.includes('\\')) return false;
+  return !value.startsWith('/')
+    && value.split('/').every((segment) => segment !== '..' && segment !== '.' && segment !== '');
 }
 
 function isIntegerInRange(value: unknown, minimum: number, maximum: number): value is number {
@@ -42,10 +50,10 @@ function validateAttribution(value: unknown): value is PetAttribution {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   const attribution = value as Partial<PetAttribution>;
   if (
-    !isNonEmptyString(attribution.creator)
-    || !isNonEmptyString(attribution.license)
+    !isBoundedString(attribution.creator, 256)
+    || !isBoundedString(attribution.license, 256)
     || typeof attribution.required !== 'boolean'
-    || !isNonEmptyString(attribution.source)
+    || !isBoundedString(attribution.source, 2048)
   ) return false;
 
   try {
@@ -59,10 +67,10 @@ export function validateManifest(value: unknown): value is PetManifest {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   const manifest = value as Partial<PetManifest>;
   if (
-    !isNonEmptyString(manifest.id)
+    !isBoundedString(manifest.id, 64)
     || !identifierPattern.test(manifest.id)
-    || !isNonEmptyString(manifest.name)
-    || !isNonEmptyString(manifest.species)
+    || !isBoundedString(manifest.name, 256)
+    || !isBoundedString(manifest.species, 256)
     || !isIntegerInRange(manifest.scale, 1, 16)
     || (manifest.enabled !== undefined && typeof manifest.enabled !== 'boolean')
     || (manifest.preview !== undefined && !isSafePetPath(manifest.preview))

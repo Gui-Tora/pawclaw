@@ -33,11 +33,18 @@ function messageTimestamp(message: ChatMessage): number {
   return typeof message.timestamp === 'number' ? message.timestamp : 0;
 }
 
+const MAX_COMPLETED_RUNS = 50;
+
 export function ChatApp({ assistantName }: ChatAppProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [notice, setNotice] = useState(`Conectando con ${assistantName}…`);
+  // Read through a ref inside stable callbacks: depending on assistantName
+  // directly would tear down and rebuild the chat subscription every time the
+  // agent identity resolves, dropping updates delivered in the gap.
+  const assistantNameRef = useRef(assistantName);
+  assistantNameRef.current = assistantName;
   const serverMessages = useRef<ChatMessage[]>([]);
   const pendingMessages = useRef<PendingMessage[]>([]);
   const displayRuns = useRef(new Map<string, DisplayRun>());
@@ -118,7 +125,10 @@ export function ChatApp({ assistantName }: ChatAppProps) {
 
     const run = getRun(update.runId, update.timestamp);
     if (update.type === 'commentary') {
-      const key = update.itemId ?? `commentary-${run.commentary.size}`;
+      // Fixed fallback key: deriving it from the map size would give every
+      // no-itemId update a fresh key, duplicating bubbles instead of
+      // replacing the previous one.
+      const key = update.itemId ?? 'commentary-default';
       if (!update.content.trim()) {
         run.commentary.delete(key);
       } else {
@@ -159,22 +169,33 @@ export function ChatApp({ assistantName }: ChatAppProps) {
         run.answer = undefined;
       }
       setNotice(update.type === 'final'
-        ? `Respuesta recibida de ${assistantName}.`
-        : update.reason ?? `La respuesta de ${assistantName} se interrumpió.`);
+        ? `Respuesta recibida de ${assistantNameRef.current}.`
+        : update.reason ?? `La respuesta de ${assistantNameRef.current} se interrumpió.`);
       window.clearTimeout(refreshTimer.current);
       refreshTimer.current = window.setTimeout(() => void loadHistory(), 40);
+
+      // Evict the oldest completed runs so a flyout that lives for the whole
+      // app session does not accumulate run state without bound.
+      const completed = [...displayRuns.current.values()]
+        .filter((item) => item.complete)
+        .sort((left, right) => left.startedAt - right.startedAt);
+      for (const stale of completed.slice(0, Math.max(0, completed.length - MAX_COMPLETED_RUNS))) {
+        displayRuns.current.delete(stale.runId);
+      }
     }
 
-    stickToBottom.current = true;
+    // stickToBottom is deliberately NOT forced here: the user may have
+    // scrolled up to re-read history mid-stream, and the onScroll handler is
+    // the single source of truth for whether we should follow the bottom.
     showMessages(serverMessages.current);
-  }, [assistantName, getRun, loadHistory, showMessages]);
+  }, [getRun, loadHistory, showMessages]);
 
   useEffect(() => {
     let active = true;
     void window.openclawPet.getGatewayStatus().then((status) => {
       if (active) {
         setNotice(status.connected
-          ? `Conectado con ${assistantName}.`
+          ? `Conectado con ${assistantNameRef.current}.`
           : (status.detail ?? 'Gateway sin conexión.'));
       }
     }).catch(() => {
@@ -187,7 +208,7 @@ export function ChatApp({ assistantName }: ChatAppProps) {
       window.clearTimeout(refreshTimer.current);
       unsubscribe();
     };
-  }, [applyChatUpdate, assistantName, loadHistory]);
+  }, [applyChatUpdate, loadHistory]);
 
   useEffect(() => {
     if (!stickToBottom.current) return;

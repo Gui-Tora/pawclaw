@@ -1,5 +1,3 @@
-import type { PetMood } from './types.js';
-
 export type PetEvent =
   | { type: 'agent:thinking' }
   | { type: 'agent:response' }
@@ -7,8 +5,3 @@ export type PetEvent =
   | { type: 'gateway:disconnected' }
   | { type: 'user:idle' }
   | { type: 'user:open-chat' };
-
-export interface PetStateChangedEvent {
-  mood: PetMood;
-  reason: PetEvent['type'];
-}

@@ -26,19 +26,25 @@ export function PetRenderer({ manifest, mood, onDoubleClick, size }: PetRenderer
     setFailed(false);
     if (animation.frames === 1 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const interval = window.setInterval(() => {
+      // Pure updater: React may replay it, so no side effects in here. For
+      // non-looping animations the frame simply holds at the last value
+      // (same-state updates bail out without re-rendering).
       setFrame((current) => {
-        if (current + 1 < animation.frames) return current + 1;
-        if (animation.loop) return 0;
-        window.clearInterval(interval);
-        return animation.frames - 1;
+        const next = current + 1;
+        if (next < animation.frames) return next;
+        return animation.loop ? 0 : current;
       });
     }, 1000 / animation.fps);
     return () => window.clearInterval(interval);
-  }, [animation]);
+    // Depend on the animation's values, not its identity: each IPC round trip
+    // delivers a fresh manifest object and must not restart the animation.
+  }, [animation.frames, animation.fps, animation.loop, animation.src]);
 
   const scale = size ? size / Math.max(animation.frameWidth, animation.frameHeight) : manifest.scale;
-  const frameWidth = animation.frameWidth * scale;
-  const frameHeight = animation.frameHeight * scale;
+  // Round per-frame dimensions so fractional scales cannot accumulate
+  // sub-pixel drift that bleeds adjacent sprite-sheet frames into view.
+  const frameWidth = Math.round(animation.frameWidth * scale);
+  const frameHeight = Math.round(animation.frameHeight * scale);
   const sheetWidth = frameWidth * animation.frames;
   const imageStyle: CSSProperties = {
     width: sheetWidth,

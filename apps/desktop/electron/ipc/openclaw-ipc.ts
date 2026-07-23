@@ -1,10 +1,11 @@
 import { BrowserWindow, ipcMain } from 'electron';
 import { OpenClawConnection } from '@pawclaw/openclaw-client';
-import { dispatchPetEvent } from './pet-ipc.js';
+import { dispatchPetEvent, setGatewayStatusProvider } from './pet-ipc.js';
 
 export const connection = new OpenClawConnection();
 
 export function registerOpenClawIpc(): void {
+  setGatewayStatusProvider(() => connection.status().connected);
   ipcMain.handle('openclaw:status', () => connection.status());
   ipcMain.handle('openclaw:identity', () => connection.getAgentIdentity());
   connection.onStatusChange((status) => {

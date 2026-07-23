@@ -42,6 +42,7 @@ export function createPetWindow(alwaysOnTop: boolean): BrowserWindow {
   window.on('closed', () => alwaysOnTopPreferences.delete(window));
   window.once('ready-to-show', reinforce);
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.webContents.on('will-navigate', (event) => event.preventDefault());
   void window.loadFile(join(import.meta.dirname, '../../renderer/index.html'), {
     query: { view: 'pet' }
   });

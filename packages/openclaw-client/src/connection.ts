@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -73,10 +73,10 @@ export type ChatUpdate =
 type ChatEventListener = (update: ChatUpdate) => void;
 type StatusEventListener = (status: GatewayStatus) => void;
 
-function resolveGatewayToken(): string | undefined {
+async function resolveGatewayToken(): Promise<string | undefined> {
   if (process.env.OPENCLAW_GATEWAY_TOKEN) return process.env.OPENCLAW_GATEWAY_TOKEN;
   try {
-    const config = JSON.parse(readFileSync(join(homedir(), '.openclaw', 'openclaw.json'), 'utf8')) as {
+    const config = JSON.parse(await readFile(join(homedir(), '.openclaw', 'openclaw.json'), 'utf8')) as {
       gateway?: { auth?: { token?: string } };
     };
     return config.gateway?.auth?.token;
@@ -84,6 +84,10 @@ function resolveGatewayToken(): string | undefined {
     return undefined;
   }
 }
+
+const INITIAL_RECONNECT_DELAY_MS = 1_000;
+const MAX_RECONNECT_DELAY_MS = 30_000;
+const DELTA_EMIT_INTERVAL_MS = 50;
 
 export class OpenClawConnection {
   private readonly endpoint: string;
@@ -99,8 +103,13 @@ export class OpenClawConnection {
   }>();
   private readonly activeRunIds = new Set<string>();
   private readonly streamTextByRun = new Map<string, string>();
+  private readonly deltaEmitTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly lastDeltaEmitAt = new Map<string, number>();
   private readonly chatEventListeners = new Set<ChatEventListener>();
   private readonly statusEventListeners = new Set<StatusEventListener>();
+  private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  private reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+  private intentionalDisconnect = false;
 
   constructor(endpoint = process.env.OPENCLAW_GATEWAY_URL ?? DEFAULT_GATEWAY_ENDPOINT, sessionKey = process.env.PAWCLAW_SESSION_KEY ?? DEFAULT_GATEWAY_SESSION_KEY) {
     this.endpoint = endpoint;
@@ -114,12 +123,29 @@ export class OpenClawConnection {
   async connect(): Promise<void> {
     if (this.connected) return;
     if (this.connecting) return this.connecting;
-    const token = resolveGatewayToken();
+    this.intentionalDisconnect = false;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
+    const attempt = this.establishConnection();
+    this.connecting = attempt;
+    attempt.finally(() => {
+      if (this.connecting === attempt) this.connecting = undefined;
+    }).catch(() => {
+      // Rejections are surfaced to the connect() caller; this handler only
+      // prevents an unhandled rejection from the bookkeeping chain above.
+    });
+    return attempt;
+  }
+
+  private async establishConnection(): Promise<void> {
+    const token = await resolveGatewayToken();
     if (!token) {
       this.detail = 'Gateway token not available to the Electron main process';
       throw new Error(this.detail);
     }
-    this.connecting = new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       const socket = new WebSocket(this.endpoint);
       this.socket = socket;
       let settled = false;
@@ -131,7 +157,6 @@ export class OpenClawConnection {
         if (settled) return;
         settled = true;
         clearTimeout(timeout);
-        this.connecting = undefined;
         if (error) {
           this.detail = error.message;
           reject(error);
@@ -139,6 +164,7 @@ export class OpenClawConnection {
         else resolve();
       };
       socket.onmessage = (event) => {
+        if (this.socket !== socket) return;
         let frame: GatewayFrame;
         try {
           frame = JSON.parse(String(event.data)) as GatewayFrame;
@@ -159,7 +185,9 @@ export class OpenClawConnection {
             locale: 'es-ES',
             userAgent: 'pawclaw/0.1.0'
           }).then(() => {
+            if (this.socket !== socket) return;
             this.connected = true;
+            this.reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
             this.detail = `Connected to OpenClaw (${this.sessionKey})`;
             this.emitStatusUpdate();
             void this.request('sessions.messages.subscribe', { key: this.sessionKey }).catch(() => {
@@ -168,6 +196,7 @@ export class OpenClawConnection {
             });
             finish();
           }).catch((error: unknown) => {
+            if (this.socket !== socket) return;
             this.detail = error instanceof Error ? error.message : 'Gateway authentication failed';
             socket.close();
             finish(error instanceof Error ? error : new Error(this.detail));
@@ -186,12 +215,19 @@ export class OpenClawConnection {
         if (frame.type === 'event') this.handleGatewayEvent(frame);
       };
       socket.onerror = () => {
+        if (this.socket !== socket) return;
         if (!this.connected) {
           socket.close();
           finish(new Error('Could not connect to the OpenClaw gateway'));
         }
       };
       socket.onclose = () => {
+        if (this.socket !== socket) {
+          // A stale socket closing must not tear down the state of a newer
+          // connection attempt; it only needs to settle its own handshake.
+          finish(new Error('Gateway connection closed before authentication completed'));
+          return;
+        }
         const wasConnected = this.connected;
         this.connected = false;
         this.socket = undefined;
@@ -200,12 +236,42 @@ export class OpenClawConnection {
           pending.reject(new Error('Gateway connection closed'));
         }
         this.pending.clear();
-        if (this.connecting) finish(new Error('Gateway connection closed before authentication completed'));
+        this.abortActiveRuns('Gateway connection closed');
+        if (!settled) finish(new Error('Gateway connection closed before authentication completed'));
         else if (wasConnected) this.detail = 'Gateway connection closed';
         this.emitStatusUpdate();
+        if (wasConnected && !this.intentionalDisconnect) this.scheduleReconnect();
       };
     });
-    return this.connecting;
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer || this.intentionalDisconnect) return;
+    const delay = this.reconnectDelayMs;
+    this.reconnectDelayMs = Math.min(this.reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      if (this.connected || this.intentionalDisconnect) return;
+      this.connect().then(() => {
+        // Let consumers refresh: messages may have landed while offline.
+        this.emitChatUpdate({ type: 'history', timestamp: Date.now() });
+      }).catch(() => {
+        this.scheduleReconnect();
+      });
+    }, delay);
+  }
+
+  private abortActiveRuns(reason: string): void {
+    for (const timer of this.deltaEmitTimers.values()) clearTimeout(timer);
+    this.deltaEmitTimers.clear();
+    this.lastDeltaEmitAt.clear();
+    const runIds = [...this.activeRunIds];
+    this.activeRunIds.clear();
+    this.streamTextByRun.clear();
+    const timestamp = Date.now();
+    for (const runId of runIds) {
+      this.emitChatUpdate({ type: 'error', runId, reason, timestamp });
+    }
   }
 
   async sendChat(content: string): Promise<ChatSendResult> {
@@ -228,7 +294,9 @@ export class OpenClawConnection {
           : 'The gateway could not start the agent run.'
       };
     }
-    this.activeRunIds.add(runId);
+    // Only track run ids reported by the gateway; the idempotency-key fallback
+    // never appears in chat events, so tracking it would leak the entry forever.
+    if (this.stringValue(response?.runId)) this.activeRunIds.add(runId);
     return { accepted: true, runId };
   }
 
@@ -264,6 +332,11 @@ export class OpenClawConnection {
   }
 
   disconnect(): void {
+    this.intentionalDisconnect = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
     this.socket?.close();
   }
 
@@ -278,12 +351,24 @@ export class OpenClawConnection {
   }
 
   private emitChatUpdate(update: ChatUpdate): void {
-    for (const listener of this.chatEventListeners) listener(update);
+    for (const listener of this.chatEventListeners) {
+      try {
+        listener(update);
+      } catch (error) {
+        console.error('[openclaw-client] chat listener threw', error);
+      }
+    }
   }
 
   private emitStatusUpdate(): void {
     const status = this.status();
-    for (const listener of this.statusEventListeners) listener(status);
+    for (const listener of this.statusEventListeners) {
+      try {
+        listener(status);
+      } catch (error) {
+        console.error('[openclaw-client] status listener threw', error);
+      }
+    }
   }
 
   private handleGatewayEvent(frame: GatewayFrame): void {
@@ -318,14 +403,13 @@ export class OpenClawConnection {
       const content = this.applyStreamDelta(current, payload);
       if (content !== undefined) {
         this.streamTextByRun.set(runId, content);
-        this.emitChatUpdate({ type: 'delta', runId, content, timestamp });
+        this.emitDeltaThrottled(runId);
       }
       return;
     }
 
     const message = this.toChatMessage(payload.message, 0, `stream-${runId}`);
-    this.streamTextByRun.delete(runId);
-    this.activeRunIds.delete(runId);
+    this.clearRunTracking(runId);
     if (state === 'final') {
       this.emitChatUpdate({ type: 'final', runId, message, timestamp });
       return;
@@ -359,6 +443,44 @@ export class OpenClawConnection {
       content,
       timestamp: typeof payload.ts === 'number' ? payload.ts : Date.now()
     });
+  }
+
+  /**
+   * Coalesces streamed deltas so a chatty gateway (dozens of deltas/second)
+   * emits at most one full-content update per DELTA_EMIT_INTERVAL_MS per run,
+   * instead of re-broadcasting the whole accumulated text on every chunk.
+   */
+  private emitDeltaThrottled(runId: string): void {
+    if (this.deltaEmitTimers.has(runId)) return;
+    const now = Date.now();
+    const last = this.lastDeltaEmitAt.get(runId) ?? 0;
+    const wait = Math.max(0, last + DELTA_EMIT_INTERVAL_MS - now);
+    if (wait === 0) {
+      this.flushDelta(runId);
+      return;
+    }
+    this.deltaEmitTimers.set(runId, setTimeout(() => {
+      this.deltaEmitTimers.delete(runId);
+      this.flushDelta(runId);
+    }, wait));
+  }
+
+  private flushDelta(runId: string): void {
+    const content = this.streamTextByRun.get(runId);
+    if (content === undefined) return;
+    this.lastDeltaEmitAt.set(runId, Date.now());
+    this.emitChatUpdate({ type: 'delta', runId, content, timestamp: Date.now() });
+  }
+
+  private clearRunTracking(runId: string): void {
+    const timer = this.deltaEmitTimers.get(runId);
+    if (timer) {
+      clearTimeout(timer);
+      this.deltaEmitTimers.delete(runId);
+    }
+    this.streamTextByRun.delete(runId);
+    this.lastDeltaEmitAt.delete(runId);
+    this.activeRunIds.delete(runId);
   }
 
   private applyStreamDelta(current: string | undefined, payload: Record<string, unknown>): string | undefined {

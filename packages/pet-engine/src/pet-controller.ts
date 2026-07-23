@@ -7,7 +7,7 @@ export class PetController {
   get mood(): PetMood { return this.#mood; }
 
   dispatch(event: PetEvent): PetMood {
-    this.#mood = nextPetMood(event);
+    this.#mood = nextPetMood(this.#mood, event);
     return this.#mood;
   }
 }

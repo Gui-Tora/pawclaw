@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PetManifest, PetMood } from '@pawclaw/shared';
 import { ChatApp } from '../chat/ChatApp';
 import { PetRenderer } from '../pet/PetRenderer';
@@ -13,21 +13,43 @@ export function TrayApp() {
   const [pet, setPet] = useState<{ manifest: PetManifest; mood: PetMood }>();
   const [connected, setConnected] = useState(false);
 
+  // Monotonic counter so an older identity response can never overwrite a
+  // newer one when the gateway flaps and two requests are in flight.
+  const identityRequest = useRef(0);
+
+  const loadIdentity = useCallback(async () => {
+    const requestId = ++identityRequest.current;
+    try {
+      const nextIdentity = await window.openclawPet.getAgentIdentity();
+      if (identityRequest.current === requestId) setIdentity(nextIdentity);
+    } catch {
+      // Retain the last known identity during brief reconnects.
+    }
+  }, []);
+
   const refresh = useCallback(async () => {
-    const [status, petStatus] = await Promise.all([
+    // Fetch independently: a broken pet manifest must not blank the gateway
+    // status (or vice versa), and neither failure may reject unhandled.
+    const [status, petStatus] = await Promise.allSettled([
       window.openclawPet.getGatewayStatus(),
       window.openclawPet.getPetStatus()
     ]);
-    setConnected(status.connected);
-    setPet(petStatus);
-    if (status.connected) {
-      try {
-        setIdentity(await window.openclawPet.getAgentIdentity());
-      } catch {
-        // Retain the last known identity during brief reconnects.
-      }
+    if (status.status === 'fulfilled') {
+      setConnected(status.value.connected);
+      if (status.value.connected) void loadIdentity();
     }
-  }, []);
+    if (petStatus.status === 'fulfilled') {
+      const next = petStatus.value;
+      // The manifest arrives as a fresh object on every IPC round trip; keep
+      // the current reference when nothing changed so PetRenderer does not
+      // restart its animation from frame 0 on each flyout open.
+      setPet((current) =>
+        current && current.manifest.id === next.manifest.id && current.mood === next.mood
+          ? current
+          : next
+      );
+    }
+  }, [loadIdentity]);
 
   useEffect(() => {
     void refresh();
@@ -35,9 +57,7 @@ export function TrayApp() {
     const unsubscribeView = window.openclawPet.onFlyoutViewChanged(setView);
     const unsubscribeGateway = window.openclawPet.onGatewayStatusChanged((status) => {
       setConnected(status.connected);
-      if (status.connected) {
-        void window.openclawPet.getAgentIdentity().then(setIdentity).catch(() => undefined);
-      }
+      if (status.connected) void loadIdentity();
     });
     const unsubscribeMood = window.openclawPet.onPetMoodChanged((mood) => {
       setPet((current) => current ? { ...current, mood } : current);
@@ -50,7 +70,7 @@ export function TrayApp() {
       unsubscribeMood();
       unsubscribePet();
     };
-  }, [refresh]);
+  }, [loadIdentity, refresh]);
 
   return (
     <main className="tray-shell">
@@ -96,9 +116,14 @@ export function TrayApp() {
       </nav>
 
       <div className="tray-content">
-        {view === 'chat'
-          ? <ChatApp assistantName={identity.name} />
-          : <SettingsApp />}
+        {/* Both views stay mounted: unmounting ChatApp mid-stream would drop
+            its in-progress commentary and streaming state for good. */}
+        <div className="tray-pane" hidden={view !== 'chat'}>
+          <ChatApp assistantName={identity.name} />
+        </div>
+        <div className="tray-pane" hidden={view !== 'settings'}>
+          <SettingsApp />
+        </div>
       </div>
     </main>
   );

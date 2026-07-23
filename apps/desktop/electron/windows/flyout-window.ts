@@ -31,6 +31,7 @@ export function createFlyoutWindow(): BrowserWindow {
     }
   });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.webContents.on('will-navigate', (event) => event.preventDefault());
   window.on('blur', () => {
     if (!window.webContents.isDevToolsOpened()) window.hide();
   });
