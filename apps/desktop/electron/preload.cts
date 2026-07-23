@@ -7,6 +7,11 @@ contextBridge.exposeInMainWorld('openclawPet', {
     ipcRenderer.on('pet:mood-changed', handler);
     return () => ipcRenderer.removeListener('pet:mood-changed', handler);
   },
+  onPetMotionChanged: (listener: (motion: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, motion: unknown) => listener(motion);
+    ipcRenderer.on('pet:motion-changed', handler);
+    return () => ipcRenderer.removeListener('pet:motion-changed', handler);
+  },
   onPetChanged: (listener: () => void) => {
     const handler = () => listener();
     ipcRenderer.on('pet:changed', handler);
@@ -20,8 +25,18 @@ contextBridge.exposeInMainWorld('openclawPet', {
   },
   getAgentIdentity: () => ipcRenderer.invoke('openclaw:identity'),
   getSettings: () => ipcRenderer.invoke('settings:read'),
-  updateSettings: (patch: { activePetId?: string; alwaysOnTop?: boolean }) =>
+  updateSettings: (patch: {
+    activePetId?: string;
+    alwaysOnTop?: boolean;
+    motionMode?: string;
+    petCalibrations?: Record<string, unknown>;
+  }) =>
     ipcRenderer.invoke('settings:update', patch),
+  onSettingsChanged: (listener: () => void) => {
+    const handler = () => listener();
+    ipcRenderer.on('settings:changed', handler);
+    return () => ipcRenderer.removeListener('settings:changed', handler);
+  },
   sendChat: (content: string) => ipcRenderer.invoke('chat:send', content),
   getChatHistory: () => ipcRenderer.invoke('chat:history'),
   onChatUpdated: (listener: (update: unknown) => void) => {

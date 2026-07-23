@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PetManifest, PetMood } from '@pawclaw/shared';
+import { animationForPetState } from '@pawclaw/pet-engine';
+import type { PetCalibration, PetManifest, PetMood, PetMotionState } from '@pawclaw/shared';
 import { ChatApp } from '../chat/ChatApp';
 import { PetRenderer } from '../pet/PetRenderer';
 import { SettingsApp } from '../settings/SettingsApp';
@@ -10,7 +11,8 @@ type FlyoutView = 'chat' | 'settings';
 export function TrayApp() {
   const [view, setView] = useState<FlyoutView>('chat');
   const [identity, setIdentity] = useState<AgentIdentity>({ agentId: 'main', name: 'OpenClaw' });
-  const [pet, setPet] = useState<{ manifest: PetManifest; mood: PetMood }>();
+  const [pet, setPet] = useState<{ manifest: PetManifest; mood: PetMood; motion: PetMotionState }>();
+  const [calibration, setCalibration] = useState<PetCalibration>();
   const [connected, setConnected] = useState(false);
 
   // Monotonic counter so an older identity response can never overwrite a
@@ -30,9 +32,10 @@ export function TrayApp() {
   const refresh = useCallback(async () => {
     // Fetch independently: a broken pet manifest must not blank the gateway
     // status (or vice versa), and neither failure may reject unhandled.
-    const [status, petStatus] = await Promise.allSettled([
+    const [status, petStatus, settings] = await Promise.allSettled([
       window.openclawPet.getGatewayStatus(),
-      window.openclawPet.getPetStatus()
+      window.openclawPet.getPetStatus(),
+      window.openclawPet.getSettings()
     ]);
     if (status.status === 'fulfilled') {
       setConnected(status.value.connected);
@@ -48,6 +51,9 @@ export function TrayApp() {
           ? current
           : next
       );
+      if (settings.status === 'fulfilled') {
+        setCalibration(settings.value.petCalibrations[petStatus.value.manifest.id]);
+      }
     }
   }, [loadIdentity]);
 
@@ -62,13 +68,19 @@ export function TrayApp() {
     const unsubscribeMood = window.openclawPet.onPetMoodChanged((mood) => {
       setPet((current) => current ? { ...current, mood } : current);
     });
+    const unsubscribeMotion = window.openclawPet.onPetMotionChanged((motion) => {
+      setPet((current) => current ? { ...current, motion } : current);
+    });
     const unsubscribePet = window.openclawPet.onPetChanged(() => void refresh());
+    const unsubscribeSettings = window.openclawPet.onSettingsChanged(() => void refresh());
     return () => {
       unsubscribeShown();
       unsubscribeView();
       unsubscribeGateway();
       unsubscribeMood();
+      unsubscribeMotion();
       unsubscribePet();
+      unsubscribeSettings();
     };
   }, [loadIdentity, refresh]);
 
@@ -76,7 +88,16 @@ export function TrayApp() {
     <main className="tray-shell">
       <header className="tray-header">
         <div className="tray-pet" aria-hidden="true">
-          {pet && <PetRenderer manifest={pet.manifest} mood={pet.mood} size={58} />}
+          {pet && (
+            <PetRenderer
+              animationState={animationForPetState(pet.mood, pet.motion)}
+              calibration={calibration}
+              direction={pet.motion.direction}
+              manifest={pet.manifest}
+              mood={pet.mood}
+              size={58}
+            />
+          )}
         </div>
         <div className="tray-identity">
           <span>{identity.emoji} PawClaw</span>

@@ -1,4 +1,4 @@
-import type { PetManifest, PetMood } from '@pawclaw/shared';
+import type { PetCalibration, PetManifest, PetMood, PetMotionMode, PetMotionState } from '@pawclaw/shared';
 // Single source of truth for the shapes that cross the IPC boundary: a
 // hand-rolled copy here already drifted once from the real client types.
 import type { AgentIdentity, ChatMessage, ChatSendResult, ChatUpdate } from '@pawclaw/openclaw-client';
@@ -15,12 +15,16 @@ export interface PetOption {
 export interface SettingsSnapshot {
   activePetId: string;
   alwaysOnTop: boolean;
+  motionMode: PetMotionMode;
+  petCalibrations: Record<string, PetCalibration>;
+  activePetManifest: PetManifest;
   pets: PetOption[];
 }
 
 export interface DesktopApi {
-  getPetStatus(): Promise<{ manifest: PetManifest; mood: PetMood }>;
+  getPetStatus(): Promise<{ manifest: PetManifest; mood: PetMood; motion: PetMotionState }>;
   onPetMoodChanged(listener: (mood: PetMood) => void): () => void;
+  onPetMotionChanged(listener: (motion: PetMotionState) => void): () => void;
   onPetChanged(listener: () => void): () => void;
   getGatewayStatus(): Promise<{ connected: boolean; endpoint: string; detail?: string }>;
   onGatewayStatusChanged(
@@ -29,8 +33,9 @@ export interface DesktopApi {
   getAgentIdentity(): Promise<AgentIdentity>;
   getSettings(): Promise<SettingsSnapshot>;
   updateSettings(
-    patch: Partial<Pick<SettingsSnapshot, 'activePetId' | 'alwaysOnTop'>>
+    patch: Partial<Pick<SettingsSnapshot, 'activePetId' | 'alwaysOnTop' | 'motionMode' | 'petCalibrations'>>
   ): Promise<SettingsSnapshot>;
+  onSettingsChanged(listener: () => void): () => void;
   sendChat(content: string): Promise<ChatSendResult>;
   getChatHistory(): Promise<ChatMessage[]>;
   onChatUpdated(listener: (update: ChatUpdate) => void): () => void;

@@ -1,17 +1,32 @@
 import { useEffect, useState } from 'react';
-import type { PetManifest, PetMood } from '@pawclaw/shared';
+import { animationForPetState } from '@pawclaw/pet-engine';
+import type { PetCalibration, PetManifest, PetMood, PetMotionState } from '@pawclaw/shared';
 import { PetRenderer } from './PetRenderer';
 
 export function PetApp() {
-  const [pet, setPet] = useState<{ manifest: PetManifest; mood: PetMood }>();
+  const [pet, setPet] = useState<{
+    manifest: PetManifest;
+    mood: PetMood;
+    motion: PetMotionState;
+    calibration?: PetCalibration;
+  }>();
   const [error, setError] = useState<string>();
 
   useEffect(() => {
     let active = true;
-    const loadPet = () => window.openclawPet.getPetStatus()
-      .then((status) => {
+    const loadPet = () => Promise.allSettled([
+      window.openclawPet.getPetStatus(),
+      window.openclawPet.getSettings()
+    ]).then(([petStatus, settings]) => {
         if (!active) return;
-        setPet(status);
+        if (petStatus.status !== 'fulfilled') {
+          setError(petStatus.reason instanceof Error ? petStatus.reason.message : 'No se pudo cargar la mascota');
+          return;
+        }
+        const calibration = settings.status === 'fulfilled'
+          ? settings.value.petCalibrations[petStatus.value.manifest.id]
+          : undefined;
+        setPet({ ...petStatus.value, calibration });
         setError(undefined);
       })
       .catch((reason: unknown) => {
@@ -22,11 +37,17 @@ export function PetApp() {
     const unsubscribeMood = window.openclawPet.onPetMoodChanged((mood) => {
       if (active) setPet((current) => current ? { ...current, mood } : current);
     });
+    const unsubscribeMotion = window.openclawPet.onPetMotionChanged((motion) => {
+      if (active) setPet((current) => current ? { ...current, motion } : current);
+    });
     const unsubscribePet = window.openclawPet.onPetChanged(() => void loadPet());
+    const unsubscribeSettings = window.openclawPet.onSettingsChanged(() => void loadPet());
     return () => {
       active = false;
       unsubscribeMood();
+      unsubscribeMotion();
       unsubscribePet();
+      unsubscribeSettings();
     };
   }, []);
 
@@ -36,6 +57,9 @@ export function PetApp() {
         <PetRenderer
           manifest={pet.manifest}
           mood={pet.mood}
+          calibration={pet.calibration}
+          animationState={animationForPetState(pet.mood, pet.motion)}
+          direction={pet.motion.direction}
           onDoubleClick={() => void window.openclawPet.openChat()}
         />
       ) : (
