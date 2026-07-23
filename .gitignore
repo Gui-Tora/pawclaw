@@ -7,3 +7,6 @@ release/
 *.local
 settings.json
 pets/ember/source/
+pets/ember/pet.local.json
+pets/ember/preview.png
+pets/ember/sprites/

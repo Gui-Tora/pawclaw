@@ -30,7 +30,13 @@ async function main(): Promise<void> {
 
   for (const directory of petDirectories) {
     const petDirectory = resolve(petsDirectory, directory.name);
-    const manifestPath = resolve(petDirectory, 'pet.json');
+    const localManifestPath = resolve(petDirectory, 'pet.local.json');
+    let manifestPath = resolve(petDirectory, 'pet.json');
+    try {
+      if ((await stat(localManifestPath)).isFile()) manifestPath = localManifestPath;
+    } catch {
+      // Local manifests are optional and intentionally ignored by Git.
+    }
     const manifest = loadManifest(await readFile(manifestPath, 'utf8'));
     if (manifest.id !== directory.name) {
       throw new Error(`Pet id "${manifest.id}" must match its directory "${directory.name}"`);

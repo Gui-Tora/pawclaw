@@ -7,8 +7,14 @@ contextBridge.exposeInMainWorld('openclawPet', {
     ipcRenderer.on('pet:mood-changed', handler);
     return () => ipcRenderer.removeListener('pet:mood-changed', handler);
   },
+  onPetChanged: (listener: () => void) => {
+    const handler = () => listener();
+    ipcRenderer.on('pet:changed', handler);
+    return () => ipcRenderer.removeListener('pet:changed', handler);
+  },
   getGatewayStatus: () => ipcRenderer.invoke('openclaw:status'),
   getSettings: () => ipcRenderer.invoke('settings:read'),
+  updateSettings: (patch: { activePetId?: string; alwaysOnTop?: boolean }) => ipcRenderer.invoke('settings:update', patch),
   sendChat: (content: string) => ipcRenderer.invoke('chat:send', content),
   getChatHistory: () => ipcRenderer.invoke('chat:history'),
   onChatUpdated: (listener: () => void) => {

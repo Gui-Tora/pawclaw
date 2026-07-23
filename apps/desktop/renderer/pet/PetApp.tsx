@@ -7,15 +7,22 @@ export function PetApp() {
   const [error, setError] = useState<string>();
   useEffect(() => {
     let active = true;
-    window.openclawPet.getPetStatus()
-      .then((status) => { if (active) setPet(status); })
+    const loadPet = () => window.openclawPet.getPetStatus()
+      .then((status) => {
+        if (active) {
+          setPet(status);
+          setError(undefined);
+        }
+      })
       .catch((reason: unknown) => {
         if (active) setError(reason instanceof Error ? reason.message : 'Pet could not be loaded');
       });
-    const unsubscribe = window.openclawPet.onPetMoodChanged((mood) => {
+    void loadPet();
+    const unsubscribeMood = window.openclawPet.onPetMoodChanged((mood) => {
       if (active) setPet((current) => current ? { ...current, mood } : current);
     });
-    return () => { active = false; unsubscribe(); };
+    const unsubscribePet = window.openclawPet.onPetChanged(() => void loadPet());
+    return () => { active = false; unsubscribeMood(); unsubscribePet(); };
   }, []);
 
   return (

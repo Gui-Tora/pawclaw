@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain } from 'electron';
 import { PetController } from '@pawclaw/pet-engine';
 import type { PetEvent, PetMood } from '@pawclaw/shared';
 import { getActivePetManifest } from '../pets/pet-files.js';
+import { readAppSettings } from '../settings/app-settings.js';
 
 const pet = new PetController();
 let moodTimer: ReturnType<typeof setTimeout> | undefined;
@@ -9,6 +10,12 @@ let moodTimer: ReturnType<typeof setTimeout> | undefined;
 function broadcastMood(mood: PetMood): void {
   for (const window of BrowserWindow.getAllWindows()) {
     window.webContents.send('pet:mood-changed', mood);
+  }
+}
+
+export function broadcastPetChanged(): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send('pet:changed');
   }
 }
 
@@ -26,6 +33,9 @@ export function dispatchPetEvent(event: PetEvent): PetMood {
 }
 
 export function registerPetIpc(): void {
-  ipcMain.handle('pet:status', async () => ({ manifest: await getActivePetManifest(), mood: pet.mood }));
+  ipcMain.handle('pet:status', async () => {
+    const settings = await readAppSettings();
+    return { manifest: await getActivePetManifest(settings.activePetId), mood: pet.mood };
+  });
   ipcMain.handle('pet:open-chat', () => dispatchPetEvent({ type: 'user:open-chat' }));
 }

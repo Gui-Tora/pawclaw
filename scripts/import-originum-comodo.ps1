@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true, Position = 0)]
-  [string]$ArchivePath
+  [string]$SourcePath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -9,16 +9,13 @@ Set-StrictMode -Version Latest
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$resolvedArchive = (Resolve-Path -LiteralPath $ArchivePath).Path
-if ([System.IO.Path]::GetExtension($resolvedArchive) -ne '.zip') {
-  throw 'Expected the official comodo_dragon_ZIP.zip archive.'
-}
-
+$resolvedSource = (Resolve-Path -LiteralPath $SourcePath).Path
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $petDirectory = Join-Path $repositoryRoot 'pets\ember'
 $spritesDirectory = Join-Path $petDirectory 'sprites'
 $manifestPath = Join-Path $petDirectory 'pet.json'
-$temporaryDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ("pawclaw-ember-" + [Guid]::NewGuid().ToString('N'))
+$localManifestPath = Join-Path $petDirectory 'pet.local.json'
+$temporaryDirectory = $null
 
 function Convert-GifToSpriteSheet {
   param(
@@ -80,34 +77,51 @@ function Convert-GifToSpriteSheet {
   } finally { $image.Dispose() }
 }
 
-New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
 try {
-  $archive = [System.IO.Compression.ZipFile]::OpenRead($resolvedArchive)
-  try {
-    foreach ($entry in $archive.Entries) {
-      $normalized = $entry.FullName.Replace('\', '/')
-      if ($normalized.StartsWith('/') -or $normalized.Split('/') -contains '..') {
-        throw "Unsafe archive entry: $($entry.FullName)"
+  if (Test-Path -LiteralPath $resolvedSource -PathType Container) {
+    $sourceDirectory = $resolvedSource
+  } elseif ([System.IO.Path]::GetExtension($resolvedSource) -eq '.zip') {
+    $temporaryDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ("pawclaw-ember-" + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($resolvedSource)
+    try {
+      foreach ($entry in $archive.Entries) {
+        $normalized = $entry.FullName.Replace('\', '/')
+        if ($normalized.StartsWith('/') -or $normalized.Split('/') -contains '..') {
+          throw "Unsafe archive entry: $($entry.FullName)"
+        }
       }
-    }
-  } finally { $archive.Dispose() }
+    } finally { $archive.Dispose() }
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($resolvedSource, $temporaryDirectory)
+    $sourceDirectory = $temporaryDirectory
+  } else {
+    throw 'Expected the official extracted directory or comodo_dragon_ZIP.zip archive.'
+  }
 
-  [System.IO.Compression.ZipFile]::ExtractToDirectory($resolvedArchive, $temporaryDirectory)
+  $licenseFile = Get-ChildItem -LiteralPath $sourceDirectory -Recurse -File |
+    Where-Object { $_.Name -in @('licence.txt', 'license.txt') } |
+    Select-Object -First 1
+  if (-not $licenseFile) { throw 'The source does not contain the Originum license file.' }
+  $license = Get-Content -Raw -LiteralPath $licenseFile.FullName
+  if ($license -notmatch 'Originum' -or $license -notmatch 'Credit required' -or $license -notmatch 'redistribute') {
+    throw 'The source license does not match the expected Originum package.'
+  }
+
   New-Item -ItemType Directory -Path $spritesDirectory -Force | Out-Null
-
   $mappings = @(
     [PSCustomObject]@{ state = 'idle'; pattern = 'idle'; output = 'idle.png'; loop = $true },
     [PSCustomObject]@{ state = 'walk'; pattern = 'run'; output = 'walk.png'; loop = $true },
+    [PSCustomObject]@{ state = 'talk'; pattern = 'bite'; output = 'talk.png'; loop = $true },
     [PSCustomObject]@{ state = 'alert'; pattern = 'hit'; output = 'alert.png'; loop = $false }
   )
   $animations = [ordered]@{}
   $maximumFrameWidth = 1
 
   foreach ($mapping in $mappings) {
-    $gif = Get-ChildItem -LiteralPath $temporaryDirectory -Recurse -File -Filter '*.gif' |
+    $gif = Get-ChildItem -LiteralPath $sourceDirectory -Recurse -File -Filter '*.gif' |
       Where-Object { $_.BaseName -match $mapping.pattern } |
       Select-Object -First 1
-    if (-not $gif) { throw "The archive does not contain the expected $($mapping.pattern) GIF animation." }
+    if (-not $gif) { throw "The source does not contain the expected $($mapping.pattern) GIF animation." }
 
     $outputPath = Join-Path $spritesDirectory $mapping.output
     $previewPath = if ($mapping.state -eq 'idle') { Join-Path $petDirectory 'preview.png' } else { $null }
@@ -129,12 +143,14 @@ try {
   $manifest.scale = [Math]::Max(1, [Math]::Min(4, [Math]::Floor(144 / $maximumFrameWidth)))
   $manifest.animations = [PSCustomObject]$animations
   $json = $manifest | ConvertTo-Json -Depth 10
-  [System.IO.File]::WriteAllText($manifestPath, $json + [Environment]::NewLine, (New-Object System.Text.UTF8Encoding($false)))
+  [System.IO.File]::WriteAllText($localManifestPath, $json + [Environment]::NewLine, (New-Object System.Text.UTF8Encoding($false)))
 
-  Write-Host "Imported Ember sprites from $resolvedArchive"
-  Write-Host "Credit retained: Originum - https://originum.itch.io/comodo-dragon"
+  Write-Host "Imported Ember sprites from $resolvedSource"
+  Write-Host "Local manifest: $localManifestPath"
+  Write-Host 'Credit retained: Originum - https://originum.itch.io/comodo-dragon'
+  Write-Host 'The imported files are ignored by Git because the license prohibits redistribution.'
 } finally {
-  if (Test-Path -LiteralPath $temporaryDirectory) {
+  if ($temporaryDirectory -and (Test-Path -LiteralPath $temporaryDirectory)) {
     [System.IO.Directory]::Delete($temporaryDirectory, $true)
   }
 }

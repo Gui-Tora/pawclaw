@@ -58,4 +58,14 @@ When attribution is required, include both an `attribution` object in `pet.json`
 }
 ```
 
-Do not commit original source archives unless their license explicitly permits redistribution. Prefer importing only the derived runtime images required by PawClaw.
+Do not commit original source archives or derived runtime images unless their license explicitly permits redistribution.
+
+## Importing Ember locally
+
+Originum's Comodo Dragon license allows use with credit but prohibits redistribution of the asset pack. Import your own downloaded copy into the local working tree:
+
+```powershell
+npm run import:ember -- "C:\path\to\comodo_dragon_ZIP"
+```
+
+The command accepts either the extracted directory or the official ZIP. It validates the included license, converts `idle`, `run`, `bite`, and `hit` into PawClaw spritesheets, and writes an ignored `pet.local.json`. Ember then becomes the active pet without placing licensed artwork in Git.
