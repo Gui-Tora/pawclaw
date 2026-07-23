@@ -1,0 +1,43 @@
+{
+  "id": "cuervo-magico",
+  "name": "Cuervo mágico",
+  "species": "raven",
+  "scale": 1,
+  "enabled": true,
+  "preview": "preview.png",
+  "animations": {
+    "idle": {
+      "src": "sprites/idle.png",
+      "frameWidth": 128,
+      "frameHeight": 180,
+      "frames": 8,
+      "fps": 4,
+      "loop": true,
+      "layout": {
+        "groundY": 170
+      }
+    },
+    "walk": {
+      "src": "sprites/walk.png",
+      "frameWidth": 128,
+      "frameHeight": 180,
+      "frames": 8,
+      "fps": 8,
+      "loop": true,
+      "layout": {
+        "groundY": 168
+      }
+    },
+    "talk": {
+      "src": "sprites/talk.png",
+      "frameWidth": 128,
+      "frameHeight": 180,
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "layout": {
+        "groundY": 174
+      }
+    }
+  }
+}
