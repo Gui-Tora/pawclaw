@@ -40,6 +40,10 @@ function isScale(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0.25 && value <= 16;
 }
 
+function isMotionSpeed(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 20 && value <= 300;
+}
+
 function parseInsets(value: unknown): PetSpriteInsets | undefined {
   if (!isRecord(value) || Object.keys(value).length !== 4) return undefined;
   if (!isIntegerInRange(value.top, 0, 4095)
@@ -82,7 +86,7 @@ function parseAnimationLayout(value: unknown): PetAnimationLayout | undefined {
 
 function parseCalibration(value: unknown): PetCalibration | undefined {
   if (!isRecord(value)) return undefined;
-  const allowed = new Set(['scale', 'animations']);
+  const allowed = new Set(['scale', 'flipX', 'motionSpeed', 'animations']);
   const keys = Object.keys(value);
   if (keys.length === 0 || !keys.every((key) => allowed.has(key))) return undefined;
 
@@ -90,6 +94,14 @@ function parseCalibration(value: unknown): PetCalibration | undefined {
   if ('scale' in value) {
     if (!isScale(value.scale)) return undefined;
     calibration.scale = value.scale;
+  }
+  if ('flipX' in value) {
+    if (typeof value.flipX !== 'boolean') return undefined;
+    calibration.flipX = value.flipX;
+  }
+  if ('motionSpeed' in value) {
+    if (!isMotionSpeed(value.motionSpeed)) return undefined;
+    calibration.motionSpeed = value.motionSpeed;
   }
   if ('animations' in value) {
     if (!isRecord(value.animations)) return undefined;

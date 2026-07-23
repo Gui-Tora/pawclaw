@@ -20,7 +20,10 @@
       "frameHeight": 128,
       "frames": 8,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "layout": {
+        "groundY": 113
+      }
     },
     "talk": {
       "src": "sprites/talk.png",

@@ -23,6 +23,8 @@ export class PetMotionController {
     locomotion: 'stationary',
     phaseRemainingMs: DEFAULT_TASKBAR_PATROL_OPTIONS.restDurationMs
   };
+  private patrolOptions = { ...DEFAULT_TASKBAR_PATROL_OPTIONS };
+  private groundY?: number;
   private timer: ReturnType<typeof setInterval> | undefined;
   private lastTick = performance.now();
   private lastState?: PetMotionState;
@@ -70,6 +72,19 @@ export class PetMotionController {
     this.mood = mood;
     this.lastTick = performance.now();
     this.emitState();
+  }
+
+  setSpeed(speed: number): void {
+    this.patrolOptions = {
+      ...this.patrolOptions,
+      speed: Math.min(300, Math.max(20, speed))
+    };
+  }
+
+  setGroundY(groundY: number): void {
+    const height = this.window.isDestroyed() ? 0 : this.window.getBounds().height;
+    this.groundY = Math.min(height, Math.max(0, groundY));
+    if (this.mode === 'taskbar') this.positionOnTrack();
   }
 
   refresh(): void {
@@ -122,7 +137,7 @@ export class PetMotionController {
     if (!track || this.window.isDestroyed()) return;
     const currentX = this.patrol.x === 0 ? this.window.getBounds().x : this.patrol.x;
     this.patrol = { ...this.patrol, x: clamp(currentX, track.minX, track.maxX) };
-    this.window.setPosition(Math.round(this.patrol.x), Math.round(track.y), false);
+    this.window.setPosition(Math.round(this.patrol.x), this.trackY(track), false);
   }
 
   private tick(): void {
@@ -135,8 +150,8 @@ export class PetMotionController {
       this.emitState();
       return;
     }
-    this.patrol = advanceTaskbarPatrol(this.patrol, elapsed, track);
-    this.window.setPosition(Math.round(this.patrol.x), Math.round(track.y), false);
+    this.patrol = advanceTaskbarPatrol(this.patrol, elapsed, track, this.patrolOptions);
+    this.window.setPosition(Math.round(this.patrol.x), this.trackY(track), false);
     this.emitState();
   }
 
@@ -148,5 +163,13 @@ export class PetMotionController {
       && this.lastState.direction === next.direction) return;
     this.lastState = next;
     this.onStateChanged(next);
+  }
+
+  private trackY(track: { y: number }): number {
+    const height = this.window.getBounds().height;
+    const groundY = this.groundY ?? height;
+    // taskbarTrackForDisplay aligns the window bottom. Shift it down until
+    // the calibrated feet/ground point meets the same taskbar edge instead.
+    return Math.round(track.y + height - groundY);
   }
 }

@@ -20,7 +20,10 @@
       "frameHeight": 128,
       "frames": 4,
       "fps": 6,
-      "loop": true
+      "loop": true,
+      "layout": {
+        "groundY": 119
+      }
     },
     "sleep": {
       "src": "sprites/sleep.png",

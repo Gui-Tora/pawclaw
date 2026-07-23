@@ -49,6 +49,10 @@ export interface PetAnimationLayout {
 /** User overrides for one pet. Omitted fields inherit from its manifest. */
 export interface PetCalibration {
   scale?: number;
+  /** Inverts the artwork's horizontal facing direction for this pet. */
+  flipX?: boolean;
+  /** Horizontal patrol speed in display-independent pixels per second. */
+  motionSpeed?: number;
   animations?: Partial<Record<PetAnimationState, PetAnimationLayout>>;
 }
 

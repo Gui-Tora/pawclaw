@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { resolveSpriteLayout } from '@pawclaw/pet-engine';
+import { DEFAULT_TASKBAR_PATROL_OPTIONS, resolveSpriteLayout } from '@pawclaw/pet-engine';
 import type { PetAnimationLayout, PetAnimationState, PetCalibration } from '@pawclaw/shared';
 import { PetRenderer } from '../pet/PetRenderer';
 import type { SettingsSnapshot } from '../shared/desktop-api';
@@ -11,7 +11,10 @@ const motionModeLabels = {
 } as const;
 
 function hasCalibration(calibration: PetCalibration): boolean {
-  return calibration.scale !== undefined || Object.keys(calibration.animations ?? {}).length > 0;
+  return calibration.scale !== undefined
+    || calibration.flipX !== undefined
+    || calibration.motionSpeed !== undefined
+    || Object.keys(calibration.animations ?? {}).length > 0;
 }
 
 export function SettingsApp() {
@@ -120,6 +123,7 @@ export function SettingsApp() {
   }
 
   const scale = draftCalibration.scale ?? manifest?.scale ?? 1;
+  const motionSpeed = draftCalibration.motionSpeed ?? DEFAULT_TASKBAR_PATROL_OPTIONS.speed;
 
   return (
     <section className="settings-panel">
@@ -216,6 +220,25 @@ export function SettingsApp() {
                 step="0.25"
                 type="range"
                 value={scale}
+              />
+              <label className="sprite-controls__check" htmlFor="sprite-flip-x">
+                <input
+                  checked={draftCalibration.flipX ?? false}
+                  id="sprite-flip-x"
+                  onChange={(event) => setDraftCalibration((current) => ({ ...current, flipX: event.target.checked }))}
+                  type="checkbox"
+                />
+                Invertir orientacion horizontal
+              </label>
+              <label htmlFor="motion-speed">Velocidad de paseo: {motionSpeed} px/s</label>
+              <input
+                id="motion-speed"
+                max="300"
+                min="20"
+                onChange={(event) => setDraftCalibration((current) => ({ ...current, motionSpeed: Number(event.target.value) }))}
+                step="5"
+                type="range"
+                value={motionSpeed}
               />
               <div className="sprite-controls__grid">
                 <label>Offset X<input max="4096" min="-4096" onChange={(event) => updateLayout({ offsetX: Number(event.target.value) })} type="number" value={currentLayout.offsetX} /></label>

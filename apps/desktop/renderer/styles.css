@@ -404,6 +404,21 @@ button:disabled {
   accent-color: #d17d38;
 }
 
+.sprite-controls__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #71645c;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.sprite-controls__check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #d17d38;
+}
+
 .sprite-controls__row {
   display: flex;
   align-items: center;

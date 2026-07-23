@@ -1,4 +1,10 @@
-import type { PetAnimationDefinition, PetAnimationLayout } from '@pawclaw/shared';
+import type {
+  PetAnimationDefinition,
+  PetAnimationLayout,
+  PetAnimationState,
+  PetCalibration,
+  PetManifest
+} from '@pawclaw/shared';
 
 export interface ResolvedSpriteLayout {
   crop: { top: number; right: number; bottom: number; left: number };
@@ -40,4 +46,24 @@ export function resolveSpriteLayout(
     anchorX: clamp(layout.anchorX ?? Math.floor(animation.frameWidth / 2), 0, animation.frameWidth),
     groundY: clamp(layout.groundY ?? animation.frameHeight, 0, animation.frameHeight)
   };
+}
+
+/**
+ * Returns the visual Y coordinate of an animation's ground point inside its
+ * renderer stage. Electron uses it to place that point on the taskbar edge.
+ */
+export function spriteGroundY(
+  manifest: PetManifest,
+  calibration: PetCalibration | undefined,
+  state: PetAnimationState,
+  stageHeight: number
+): number {
+  const animation = manifest.animations[state] ?? manifest.animations.idle;
+  const layout = resolveSpriteLayout(animation, calibration?.animations?.[state]);
+  const scale = calibration?.scale ?? manifest.scale;
+  const viewHeight = Math.round(layout.viewHeight * scale);
+  const groundY = stageHeight - viewHeight
+    + Math.round(layout.offsetY * scale)
+    + Math.round((layout.groundY - layout.crop.top) * scale);
+  return Math.min(stageHeight, Math.max(0, groundY));
 }

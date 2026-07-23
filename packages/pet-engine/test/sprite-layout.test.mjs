@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { resolveSpriteLayout } from '../dist/index.js';
+import { resolveSpriteLayout, spriteGroundY } from '../dist/index.js';
 
 const animation = {
   src: 'sprites/idle.png',
@@ -60,5 +60,18 @@ describe('resolveSpriteLayout', () => {
       anchorX: 16,
       groundY: 12
     });
+  });
+
+  it('maps an animation ground anchor to the renderer stage', () => {
+    const manifest = {
+      id: 'test', name: 'Test', species: 'test', scale: 1,
+      animations: {
+        idle: {
+          ...animation,
+          layout: { crop: { top: 2, right: 0, bottom: 1, left: 0 }, offsetY: -3, groundY: 10 }
+        }
+      }
+    };
+    assert.equal(spriteGroundY(manifest, undefined, 'walk', 180), 176);
   });
 });

@@ -82,6 +82,8 @@ describe('SettingsStore', () => {
     const petCalibrations = {
       sol: {
         scale: 1.5,
+        flipX: true,
+        motionSpeed: 85,
         animations: {
           walk: {
             crop: { top: 2, right: 1, bottom: 4, left: 3 },
@@ -101,6 +103,8 @@ describe('SettingsStore', () => {
     await store.update({ motionMode: 'taskbar', petCalibrations: { sol: { scale: 1.5 } } });
     await assert.rejects(() => store.update({ motionMode: 'roaming' }));
     await assert.rejects(() => store.update({ petCalibrations: { sol: { scale: 99 } } }));
+    await assert.rejects(() => store.update({ petCalibrations: { sol: { motionSpeed: 301 } } }));
+    await assert.rejects(() => store.update({ petCalibrations: { sol: { flipX: 'yes' } } }));
     const invalidCalibration = { petCalibrations: { sol: { animations: { walk: {} } } } };
     await assert.rejects(() => store.update(invalidCalibration));
     assert.deepEqual(await store.read(), {

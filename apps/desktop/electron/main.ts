@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, powerMonitor, protocol } from 'electron';
+import { DEFAULT_TASKBAR_PATROL_OPTIONS, spriteGroundY } from '@pawclaw/pet-engine';
 import { registerChatIpc } from './ipc/chat-ipc.js';
 import { connection, registerOpenClawIpc } from './ipc/openclaw-ipc.js';
 import {
@@ -52,7 +53,10 @@ async function refreshPetWindowShape(): Promise<void> {
   const settings = await readAppSettings();
   const manifest = await getActivePetManifest(settings.activePetId);
   if (request !== shapeRefreshRequest || petWindow !== window || window.isDestroyed()) return;
-  applyPetWindowShape(window, manifest, settings.petCalibrations[manifest.id]);
+  const calibration = settings.petCalibrations[manifest.id];
+  applyPetWindowShape(window, manifest, calibration);
+  petMotion?.setSpeed(calibration?.motionSpeed ?? DEFAULT_TASKBAR_PATROL_OPTIONS.speed);
+  petMotion?.setGroundY(spriteGroundY(manifest, calibration, 'walk', window.getBounds().height));
 }
 
 function ensureFlyoutWindow(): BrowserWindow {
@@ -99,6 +103,9 @@ async function ensurePetWindow(): Promise<BrowserWindow> {
             .catch((error: unknown) => console.error('[pawclaw] could not persist manual movement', error));
         }
       );
+      const calibration = settings.petCalibrations[manifest.id];
+      petMotion.setSpeed(calibration?.motionSpeed ?? DEFAULT_TASKBAR_PATROL_OPTIONS.speed);
+      petMotion.setGroundY(spriteGroundY(manifest, calibration, 'walk', window.getBounds().height));
       return window;
     })().finally(() => {
       petWindowPromise = undefined;

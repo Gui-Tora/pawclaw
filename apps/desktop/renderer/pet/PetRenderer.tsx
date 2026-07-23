@@ -105,7 +105,7 @@ export function SpritePlayer({
   const containerStyle: CSSProperties = {
     width: viewWidth,
     height: viewHeight,
-    transform: `translate(${Math.round(layout.offsetX * scale)}px, ${Math.round(layout.offsetY * scale)}px) scaleX(${direction === 'left' ? -1 : 1})`
+    transform: `translate(${Math.round(layout.offsetX * scale)}px, ${Math.round(layout.offsetY * scale)}px) scaleX(${(direction === 'left') !== Boolean(calibration?.flipX) ? -1 : 1})`
   };
 
   return (
