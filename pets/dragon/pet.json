@@ -1,0 +1,34 @@
+{
+  "id": "dragon",
+  "name": "Dragon",
+  "species": "dragon",
+  "scale": 1,
+  "enabled": true,
+  "preview": "preview.png",
+  "animations": {
+    "idle": {
+      "src": "sprites/idle.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": 8,
+      "fps": 3,
+      "loop": true
+    },
+    "walk": {
+      "src": "sprites/walk.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": 8,
+      "fps": 8,
+      "loop": true
+    },
+    "talk": {
+      "src": "sprites/talk.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": 8,
+      "fps": 6,
+      "loop": true
+    }
+  }
+}
