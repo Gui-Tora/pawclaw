@@ -22,6 +22,7 @@ export function createPetWindow(alwaysOnTop: boolean): BrowserWindow {
     transparent: true,
     backgroundColor: '#00000000',
     resizable: false,
+    skipTaskbar: true,
     alwaysOnTop,
     webPreferences: {
       preload: join(import.meta.dirname, '../preload.cjs'),

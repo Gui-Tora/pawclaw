@@ -30,7 +30,6 @@ contextBridge.exposeInMainWorld('openclawPet', {
     return () => ipcRenderer.removeListener('chat:updated', handler);
   },
   openChat: () => ipcRenderer.invoke('window:open-chat'),
-  openSettings: () => ipcRenderer.invoke('window:open-settings'),
   hideFlyout: () => ipcRenderer.invoke('window:hide'),
   onFlyoutShown: (listener: () => void) => {
     const handler = () => listener();

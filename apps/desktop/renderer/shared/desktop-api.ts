@@ -35,7 +35,6 @@ export interface DesktopApi {
   getChatHistory(): Promise<ChatMessage[]>;
   onChatUpdated(listener: (update: ChatUpdate) => void): () => void;
   openChat(): Promise<void>;
-  openSettings(): Promise<void>;
   hideFlyout(): Promise<void>;
   onFlyoutShown(listener: () => void): () => void;
   onFlyoutViewChanged(listener: (view: 'chat' | 'settings') => void): () => void;

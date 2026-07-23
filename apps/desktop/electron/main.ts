@@ -109,7 +109,6 @@ if (hasSingleInstanceLock) {
       }
     });
     ipcMain.handle('window:open-chat', () => showFlyout('chat'));
-    ipcMain.handle('window:open-settings', () => showFlyout('settings'));
     ipcMain.handle('window:hide', () => {
       if (flyoutWindow && !flyoutWindow.isDestroyed()) flyoutWindow.hide();
     });

@@ -41,15 +41,6 @@ export function PetApp() {
       ) : (
         <span className="pet-shell__error">{error ?? 'Cargando…'}</span>
       )}
-      <button
-        aria-label="Abrir ajustes"
-        className="pet-shell__settings"
-        onClick={() => void window.openclawPet.openSettings()}
-        title="Ajustes"
-      >
-        ⚙
-      </button>
-      <span className="pet-shell__label">{pet?.manifest.name ?? 'PawClaw'}</span>
     </main>
   );
 }
