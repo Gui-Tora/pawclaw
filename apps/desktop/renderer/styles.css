@@ -368,7 +368,9 @@ button:disabled {
   min-height: 188px;
   display: grid;
   place-items: end center;
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 2;
   overflow: hidden;
   border: 1px solid rgba(77, 62, 52, .18);
   border-radius: 10px;
@@ -467,6 +469,188 @@ button:disabled {
   border-radius: 6px;
   color: #2d2925;
   background: #fffdf9;
+}
+
+.crop-editor-shell {
+  width: 100%;
+  min-height: 100%;
+  color: #2d2925;
+  background: #f7f5f0;
+}
+
+.crop-editor-header {
+  min-height: 72px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(77, 62, 52, .14);
+  background: #fffdf9;
+}
+
+.crop-editor-header span,
+.crop-editor-sidebar small {
+  color: #71645c;
+  font-size: 12px;
+}
+
+.crop-editor-header h1 {
+  margin: 2px 0 0;
+  font-size: 22px;
+}
+
+.crop-editor-header button,
+.crop-editor-actions button {
+  padding: 8px 11px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: #d17d38;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.crop-editor-body {
+  min-height: calc(100vh - 72px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+}
+
+.crop-editor-workspace {
+  min-width: 0;
+  padding: 24px;
+  overflow: auto;
+  background:
+    linear-gradient(45deg, rgba(121, 104, 91, .07) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(121, 104, 91, .07) 25%, transparent 25%),
+    #eee9e1;
+  background-position: 0 0, 0 10px;
+  background-size: 20px 20px;
+}
+
+.crop-editor-workspace > p {
+  margin: 0 0 16px;
+  color: #65564c;
+  font-size: 13px;
+}
+
+.crop-sheet {
+  position: relative;
+  margin: 0 auto;
+  overflow: visible;
+  touch-action: none;
+  box-shadow: 0 12px 26px rgba(45, 35, 27, .2);
+}
+
+.crop-sheet > img {
+  display: block;
+  image-rendering: pixelated;
+  user-select: none;
+}
+
+.crop-sheet__frame {
+  position: absolute;
+  border: 2px solid #f39147;
+  box-shadow: 0 0 0 1px rgba(45, 35, 27, .75);
+  pointer-events: none;
+}
+
+.crop-sheet__frame:first-of-type {
+  pointer-events: auto;
+}
+
+.crop-handle {
+  width: 14px;
+  height: 14px;
+  position: absolute;
+  z-index: 2;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #d17d38;
+  cursor: grab;
+  touch-action: none;
+}
+
+.crop-handle:active { cursor: grabbing; }
+.crop-handle--top { top: -8px; left: calc(50% - 7px); }
+.crop-handle--right { top: calc(50% - 7px); right: -8px; }
+.crop-handle--bottom { bottom: -8px; left: calc(50% - 7px); }
+.crop-handle--left { top: calc(50% - 7px); left: -8px; }
+.crop-handle--move {
+  top: calc(50% - 11px);
+  left: calc(50% - 11px);
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  cursor: move;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.crop-editor-sidebar {
+  padding: 18px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border-left: 1px solid rgba(77, 62, 52, .14);
+  background: #fffdf9;
+}
+
+.crop-editor-sidebar > label {
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.crop-editor-sidebar select,
+.crop-values input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid rgba(77, 62, 52, .22);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.crop-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.crop-values label {
+  display: grid;
+  gap: 4px;
+  color: #71645c;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.crop-editor-preview {
+  min-height: 156px;
+  display: grid;
+  place-items: end center;
+  overflow: hidden;
+  border: 1px solid rgba(77, 62, 52, .18);
+  border-radius: 9px;
+  background: #eee9e1;
+}
+
+.crop-editor-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.crop-editor-actions .button--secondary {
+  color: #5f4d40;
+  background: #e9e2d8;
+}
+
+@media (max-width: 760px) {
+  .crop-editor-body { grid-template-columns: 1fr; }
+  .crop-editor-sidebar { border-top: 1px solid rgba(77, 62, 52, .14); border-left: 0; }
 }
 
 .muted {

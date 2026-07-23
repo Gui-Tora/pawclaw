@@ -245,10 +245,9 @@ export function SettingsApp() {
                 <label>Offset Y<input max="4096" min="-4096" onChange={(event) => updateLayout({ offsetY: Number(event.target.value) })} type="number" value={currentLayout.offsetY} /></label>
                 <label>Anchor X<input max={animation.frameWidth} min="0" onChange={(event) => updateLayout({ anchorX: Number(event.target.value) })} type="number" value={currentLayout.anchorX} /></label>
                 <label>Ground Y<input max={animation.frameHeight} min="0" onChange={(event) => updateLayout({ groundY: Number(event.target.value) })} type="number" value={currentLayout.groundY} /></label>
-                <label>Recorte superior<input max={animation.frameHeight - currentLayout.crop.bottom - 1} min="0" onChange={(event) => updateLayout({ crop: { ...currentLayout.crop, top: Number(event.target.value) } })} type="number" value={currentLayout.crop.top} /></label>
-                <label>Recorte inferior<input max={animation.frameHeight - currentLayout.crop.top - 1} min="0" onChange={(event) => updateLayout({ crop: { ...currentLayout.crop, bottom: Number(event.target.value) } })} type="number" value={currentLayout.crop.bottom} /></label>
-                <label>Recorte izquierdo<input max={animation.frameWidth - currentLayout.crop.right - 1} min="0" onChange={(event) => updateLayout({ crop: { ...currentLayout.crop, left: Number(event.target.value) } })} type="number" value={currentLayout.crop.left} /></label>
-                <label>Recorte derecho<input max={animation.frameWidth - currentLayout.crop.left - 1} min="0" onChange={(event) => updateLayout({ crop: { ...currentLayout.crop, right: Number(event.target.value) } })} type="number" value={currentLayout.crop.right} /></label>
+              </div>
+              <div className="sprite-controls__row">
+                <button className="button--secondary" onClick={() => void window.openclawPet.openCropEditor(selectedState)} type="button">Editar recorte...</button>
               </div>
               <div className="sprite-controls__row">
                 <button disabled={saving} onClick={() => void applyCalibration()} type="button">Aplicar calibracion</button>

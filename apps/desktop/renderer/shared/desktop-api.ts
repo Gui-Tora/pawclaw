@@ -1,4 +1,11 @@
-import type { PetCalibration, PetManifest, PetMood, PetMotionMode, PetMotionState } from '@pawclaw/shared';
+import type {
+  PetAnimationState,
+  PetCalibration,
+  PetManifest,
+  PetMood,
+  PetMotionMode,
+  PetMotionState
+} from '@pawclaw/shared';
 // Single source of truth for the shapes that cross the IPC boundary: a
 // hand-rolled copy here already drifted once from the real client types.
 import type { AgentIdentity, ChatMessage, ChatSendResult, ChatUpdate } from '@pawclaw/openclaw-client';
@@ -36,6 +43,9 @@ export interface DesktopApi {
     patch: Partial<Pick<SettingsSnapshot, 'activePetId' | 'alwaysOnTop' | 'motionMode' | 'petCalibrations'>>
   ): Promise<SettingsSnapshot>;
   onSettingsChanged(listener: () => void): () => void;
+  openCropEditor(state: PetAnimationState): Promise<void>;
+  closeCropEditor(): Promise<void>;
+  onCropEditorState(listener: (state: PetAnimationState) => void): () => void;
   sendChat(content: string): Promise<ChatSendResult>;
   getChatHistory(): Promise<ChatMessage[]>;
   onChatUpdated(listener: (update: ChatUpdate) => void): () => void;

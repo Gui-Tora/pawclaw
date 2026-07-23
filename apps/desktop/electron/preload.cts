@@ -32,6 +32,13 @@ contextBridge.exposeInMainWorld('openclawPet', {
     petCalibrations?: Record<string, unknown>;
   }) =>
     ipcRenderer.invoke('settings:update', patch),
+  openCropEditor: (state: string) => ipcRenderer.invoke('crop-editor:open', state),
+  closeCropEditor: () => ipcRenderer.invoke('crop-editor:close'),
+  onCropEditorState: (listener: (state: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, state: string) => listener(state);
+    ipcRenderer.on('crop-editor:state', handler);
+    return () => ipcRenderer.removeListener('crop-editor:state', handler);
+  },
   onSettingsChanged: (listener: () => void) => {
     const handler = () => listener();
     ipcRenderer.on('settings:changed', handler);

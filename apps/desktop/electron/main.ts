@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, powerMonitor, protocol } from 'electron';
 import { DEFAULT_TASKBAR_PATROL_OPTIONS, spriteGroundY } from '@pawclaw/pet-engine';
+import { PET_ANIMATION_STATES, type PetAnimationState } from '@pawclaw/shared';
 import { registerChatIpc } from './ipc/chat-ipc.js';
 import { connection, registerOpenClawIpc } from './ipc/openclaw-ipc.js';
 import {
@@ -23,12 +24,14 @@ import {
   reinforcePetAlwaysOnTop
 } from './windows/pet-window.js';
 import { PetMotionController } from './windows/pet-motion-controller.js';
+import { createCropEditorWindow } from './windows/crop-editor-window.js';
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'pawclaw-pet', privileges: { secure: true, standard: true, supportFetchAPI: true } }
 ]);
 
 let flyoutWindow: BrowserWindow | undefined;
+let cropEditorWindow: BrowserWindow | undefined;
 let flyoutHiddenAt = 0;
 let petWindow: BrowserWindow | undefined;
 let petWindowPromise: Promise<BrowserWindow> | undefined;
@@ -72,6 +75,20 @@ function ensureFlyoutWindow(): BrowserWindow {
     });
   }
   return flyoutWindow;
+}
+
+function showCropEditor(state: PetAnimationState): void {
+  if (!cropEditorWindow || cropEditorWindow.isDestroyed()) {
+    cropEditorWindow = createCropEditorWindow(state);
+    cropEditorWindow.on('closed', () => {
+      cropEditorWindow = undefined;
+      // Return the user to Ajustes after finishing the focused editor.
+      if (!quitting) showFlyout('settings');
+    });
+  } else {
+    cropEditorWindow.webContents.send('crop-editor:state', state);
+    cropEditorWindow.focus();
+  }
 }
 
 async function ensurePetWindow(): Promise<BrowserWindow> {
@@ -169,6 +186,15 @@ if (hasSingleInstanceLock) {
         petMotion?.setMode(settings.motionMode);
       }
       void refreshPetWindowShape();
+    });
+    ipcMain.handle('crop-editor:open', (_event, value: unknown) => {
+      if (typeof value !== 'string' || !(PET_ANIMATION_STATES as readonly string[]).includes(value)) {
+        throw new Error('Invalid animation state for crop editor');
+      }
+      showCropEditor(value as PetAnimationState);
+    });
+    ipcMain.handle('crop-editor:close', () => {
+      if (cropEditorWindow && !cropEditorWindow.isDestroyed()) cropEditorWindow.close();
     });
     ipcMain.handle('window:open-chat', () => showFlyout('chat'));
     ipcMain.handle('window:hide', () => {
