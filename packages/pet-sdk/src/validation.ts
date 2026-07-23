@@ -1,8 +1,10 @@
 import {
   PET_ANIMATION_STATES,
   type PetAnimationDefinition,
+  type PetAnimationLayout,
   type PetAttribution,
-  type PetManifest
+  type PetManifest,
+  type PetSpriteInsets
 } from '@pawclaw/shared';
 
 const animationStates = new Set<string>(PET_ANIMATION_STATES);
@@ -35,6 +37,35 @@ function isNumberInRange(value: unknown, minimum: number, maximum: number): valu
   return typeof value === 'number' && Number.isFinite(value) && value >= minimum && value <= maximum;
 }
 
+function validateInsets(value: unknown, frameWidth: number, frameHeight: number): value is PetSpriteInsets {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const insets = value as Partial<PetSpriteInsets>;
+  if (Object.keys(insets).length !== 4
+    || !isIntegerInRange(insets.top, 0, frameHeight - 1)
+    || !isIntegerInRange(insets.right, 0, frameWidth - 1)
+    || !isIntegerInRange(insets.bottom, 0, frameHeight - 1)
+    || !isIntegerInRange(insets.left, 0, frameWidth - 1)) return false;
+  return insets.left + insets.right < frameWidth
+    && insets.top + insets.bottom < frameHeight;
+}
+
+function validateAnimationLayout(
+  value: unknown,
+  frameWidth: number,
+  frameHeight: number
+): value is PetAnimationLayout {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const layout = value as Partial<PetAnimationLayout>;
+  const allowed = new Set(['crop', 'offsetX', 'offsetY', 'anchorX', 'groundY']);
+  const keys = Object.keys(layout);
+  if (keys.length === 0 || !keys.every((key) => allowed.has(key))) return false;
+  return (layout.crop === undefined || validateInsets(layout.crop, frameWidth, frameHeight))
+    && (layout.offsetX === undefined || isIntegerInRange(layout.offsetX, -4096, 4096))
+    && (layout.offsetY === undefined || isIntegerInRange(layout.offsetY, -4096, 4096))
+    && (layout.anchorX === undefined || isIntegerInRange(layout.anchorX, 0, frameWidth))
+    && (layout.groundY === undefined || isIntegerInRange(layout.groundY, 0, frameHeight));
+}
+
 function validateAnimation(value: unknown): value is PetAnimationDefinition {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   const animation = value as Partial<PetAnimationDefinition>;
@@ -43,7 +74,9 @@ function validateAnimation(value: unknown): value is PetAnimationDefinition {
     && isIntegerInRange(animation.frameHeight, 1, 4096)
     && isIntegerInRange(animation.frames, 1, 512)
     && isNumberInRange(animation.fps, 0.1, 60)
-    && typeof animation.loop === 'boolean';
+    && typeof animation.loop === 'boolean'
+    && (animation.layout === undefined
+      || validateAnimationLayout(animation.layout, animation.frameWidth, animation.frameHeight));
 }
 
 function validateAttribution(value: unknown): value is PetAttribution {

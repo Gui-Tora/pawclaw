@@ -24,6 +24,20 @@ describe('validateManifest', () => {
     assert.equal(validateManifest(validManifest), true);
   });
 
+  it('accepts optional per-animation layout metadata', () => {
+    const layout = {
+      crop: { top: 2, right: 3, bottom: 4, left: 5 },
+      offsetX: -2,
+      offsetY: 1,
+      anchorX: 64,
+      groundY: 120
+    };
+    assert.equal(validateManifest({
+      ...validManifest,
+      animations: { idle: { ...validManifest.animations.idle, layout } }
+    }), true);
+  });
+
   it('rejects unknown states and missing idle animations', () => {
     assert.equal(validateManifest({ ...validManifest, animations: { unknown: validManifest.animations.idle } }), false);
     assert.equal(validateManifest({ ...validManifest, animations: {} }), false);
@@ -47,5 +61,17 @@ describe('validateManifest', () => {
   it('rejects oversized string fields', () => {
     assert.equal(validateManifest({ ...validManifest, name: 'x'.repeat(257) }), false);
     assert.equal(validateManifest({ ...validManifest, species: 'x'.repeat(257) }), false);
+  });
+
+  it('rejects impossible or malformed layout metadata', () => {
+    const withLayout = (layout) => ({
+      ...validManifest,
+      animations: { idle: { ...validManifest.animations.idle, layout } }
+    });
+    assert.equal(validateManifest(withLayout({ crop: { top: 0, right: 64, bottom: 0, left: 64 } })), false);
+    assert.equal(validateManifest(withLayout({ crop: { top: 0, right: 0, bottom: 0, left: 0, extra: 1 } })), false);
+    assert.equal(validateManifest(withLayout({ anchorX: 129 })), false);
+    assert.equal(validateManifest(withLayout({ groundY: -1 })), false);
+    assert.equal(validateManifest(withLayout({ offsetX: 1.5 })), false);
   });
 });

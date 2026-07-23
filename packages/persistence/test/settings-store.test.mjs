@@ -19,15 +19,15 @@ describe('SettingsStore', () => {
   it('persists a truly partial update, preserving the other field', async () => {
     await store.update({ activePetId: 'ember', alwaysOnTop: false });
     const saved = await store.update({ alwaysOnTop: true });
-    assert.deepEqual(saved, { activePetId: 'ember', alwaysOnTop: true });
+    assert.deepEqual(saved, { ...defaultSettings, activePetId: 'ember', alwaysOnTop: true });
     assert.deepEqual(JSON.parse(await readFile(path, 'utf8')), saved);
   });
 
   it('reports the pre-patch settings from applyUpdate', async () => {
     await store.update({ activePetId: 'ember', alwaysOnTop: true });
     const { previous, settings } = await store.applyUpdate({ alwaysOnTop: false });
-    assert.deepEqual(previous, { activePetId: 'ember', alwaysOnTop: true });
-    assert.deepEqual(settings, { activePetId: 'ember', alwaysOnTop: false });
+    assert.deepEqual(previous, { ...defaultSettings, activePetId: 'ember', alwaysOnTop: true });
+    assert.deepEqual(settings, { ...defaultSettings, activePetId: 'ember', alwaysOnTop: false });
   });
 
   it('rejects invalid patch values without touching stored settings', async () => {
@@ -35,7 +35,7 @@ describe('SettingsStore', () => {
     await assert.rejects(() => store.update({ activePetId: 'Not Valid!' }));
     await assert.rejects(() => store.update({ alwaysOnTop: 'yes' }));
     // The previously valid value must survive an invalid patch attempt.
-    assert.deepEqual(await store.read(), { activePetId: 'ember', alwaysOnTop: false });
+    assert.deepEqual(await store.read(), { ...defaultSettings, activePetId: 'ember', alwaysOnTop: false });
   });
 
   it('falls back safely when stored values are invalid', async () => {
@@ -64,6 +64,49 @@ describe('SettingsStore', () => {
     assert.equal(first.activePetId, 'ember');
     assert.equal(second.alwaysOnTop, false);
     // The write queue must merge both patches instead of last-write-wins.
-    assert.deepEqual(await store.read(), { activePetId: 'ember', alwaysOnTop: false });
+    assert.deepEqual(await store.read(), { ...defaultSettings, activePetId: 'ember', alwaysOnTop: false });
+  });
+
+  it('migrates existing settings to motion and calibration defaults', async () => {
+    await writeFile(path, JSON.stringify({ activePetId: 'sol', alwaysOnTop: false }));
+    assert.deepEqual(await store.read(), {
+      activePetId: 'sol',
+      alwaysOnTop: false,
+      motionMode: 'manual',
+      petCalibrations: {}
+    });
+  });
+
+  it('persists an explicit motion mode and per-pet animation calibration', async () => {
+    await store.update({ alwaysOnTop: true });
+    const petCalibrations = {
+      sol: {
+        scale: 1.5,
+        animations: {
+          walk: {
+            crop: { top: 2, right: 1, bottom: 4, left: 3 },
+            offsetX: -2,
+            groundY: 119
+          }
+        }
+      }
+    };
+    const saved = await store.update({ motionMode: 'taskbar', petCalibrations });
+    assert.deepEqual(saved, { ...defaultSettings, motionMode: 'taskbar', petCalibrations });
+    assert.deepEqual(JSON.parse(await readFile(path, 'utf8')), saved);
+  });
+
+  it('rejects malformed motion and calibration patches without overwriting saved data', async () => {
+    await store.update({ alwaysOnTop: true });
+    await store.update({ motionMode: 'taskbar', petCalibrations: { sol: { scale: 1.5 } } });
+    await assert.rejects(() => store.update({ motionMode: 'roaming' }));
+    await assert.rejects(() => store.update({ petCalibrations: { sol: { scale: 99 } } }));
+    const invalidCalibration = { petCalibrations: { sol: { animations: { walk: {} } } } };
+    await assert.rejects(() => store.update(invalidCalibration));
+    assert.deepEqual(await store.read(), {
+      ...defaultSettings,
+      motionMode: 'taskbar',
+      petCalibrations: { sol: { scale: 1.5 } }
+    });
   });
 });

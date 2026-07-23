@@ -33,13 +33,22 @@ Spritesheets are horizontal PNG images. Every frame must have the same dimension
       "frameHeight": 16,
       "frames": 4,
       "fps": 4,
-      "loop": true
+      "loop": true,
+      "layout": {
+        "crop": { "top": 1, "right": 0, "bottom": 0, "left": 0 },
+        "offsetX": 0,
+        "offsetY": 0,
+        "anchorX": 8,
+        "groundY": 16
+      }
     }
   }
 }
 ```
 
 `idle` is required. Other supported animations are `walk`, `sleep`, `think`, `talk`, `celebrate`, and `alert`. When the animation selected for an application state is missing, the renderer falls back to `idle`.
+
+`layout` is optional and uses unscaled source pixels. `crop` removes a stable transparent border from every frame, `offsetX`/`offsetY` adjust its visual placement, and `anchorX`/`groundY` define the point used to align a pet with the desktop shelf. The crop must leave at least one source pixel in both directions. Users can override these values locally in Ajustes without changing `pet.json`.
 
 Set `enabled` to `false` while optional third-party assets have not been installed. Disabled manifests are schema-checked but their missing image files do not fail repository validation.
 
