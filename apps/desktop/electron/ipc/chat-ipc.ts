@@ -15,8 +15,14 @@ export function registerChatIpc(): void {
     }
   });
   ipcMain.handle('chat:history', () => connection.getChatHistory());
-  connection.onChatUpdate(() => {
-    dispatchPetEvent({ type: 'agent:response' });
-    for (const window of BrowserWindow.getAllWindows()) window.webContents.send('chat:updated');
+  connection.onChatUpdate((update) => {
+    if (update.type === 'delta' || update.type === 'final') {
+      dispatchPetEvent({ type: 'agent:response' });
+    } else if (update.type === 'commentary') {
+      dispatchPetEvent({ type: 'agent:thinking' });
+    }
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send('chat:updated', update);
+    }
   });
 }

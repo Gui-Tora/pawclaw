@@ -3,7 +3,6 @@ export const PET_ANIMATION_STATES = ['idle', 'walk', 'sleep', 'think', 'talk', '
 
 export type PetMood = (typeof PET_MOODS)[number];
 export type PetAnimationState = (typeof PET_ANIMATION_STATES)[number];
-export type WindowKind = 'pet' | 'chat' | 'settings';
 
 export interface PetAnimationDefinition {
   src: string;

@@ -2,7 +2,7 @@
 
 **Give your OpenClaw agent a little life on your desktop.**
 
-PawClaw is a local, privacy-minded desktop companion for [OpenClaw](https://openclaw.ai). It lives in its own transparent window, reacts while your agent works, and opens a focused chat whenever you want to talk.
+PawClaw is a local, privacy-minded desktop companion for [OpenClaw](https://openclaw.ai). The animated pet stays visible on your desktop, while its tray icon opens a compact flyout whenever you want to talk or change settings.
 
 <p align="center">
   <img src="pets/sol/preview.png" width="160" alt="Sol, PawClaw's animated cat companion">
@@ -12,8 +12,10 @@ PawClaw is a local, privacy-minded desktop companion for [OpenClaw](https://open
 
 ## What it does
 
-- **A companion that reacts.** Sol changes animation when OpenClaw is idle, thinking, replying, busy, offline, or celebrating.
-- **A real OpenClaw chat.** Open a desktop chat window, send messages through the local Gateway, and pick up the existing conversation history.
+- **A companion that reacts.** The selected pet changes animation when OpenClaw is idle, thinking, replying, busy, offline, or celebrating.
+- **A real OpenClaw chat.** The flyout renders commentary and assistant deltas live, then reconciles the final answer with the existing conversation history.
+- **Your agent's identity.** The displayed name, emoji, and avatar come from OpenClaw's effective agent identity instead of being hardcoded.
+- **A native tray app.** Left-click toggles the flyout; right-click opens quick actions for chat, settings, and exit. PawClaw stays out of the taskbar.
 - **Local by design.** PawClaw connects directly to your local OpenClaw Gateway. The Gateway token remains in Electron's main process and is never exposed to the renderer.
 - **Pixel-art pets.** Pets are manifest-based, so adding a character does not require changing the application. Sol ships with idle, walk, sleep, think, talk, celebrate, and alert animations.
 - **Built to extend.** Electron + React + TypeScript in a small npm-workspace monorepo, with a separate pet engine and SDK.
@@ -47,8 +49,8 @@ npm run dev
 
 1. Start your OpenClaw Gateway.
 2. Run PawClaw.
-3. Double-click Sol to open the chat.
-4. Talk to your agent — PawClaw keeps the conversation history in sync and Sol reacts to the agent's state.
+3. Click the PawClaw icon beside the Windows clock.
+4. Talk to your agent — PawClaw streams progress and the final answer while keeping the conversation history synchronized.
 
 ## Development
 
@@ -77,7 +79,7 @@ See [pets/README.md](pets/README.md) for the manifest and spritesheet format. Ru
 
 ## Project status
 
-PawClaw is an early work in progress, but the core loop is already usable: animated desktop pet, local Gateway connection, state-driven reactions, and synced desktop chat history. Expect the UI, settings, packaging, and pet ecosystem to grow from here.
+PawClaw is an early work in progress, but the core loop is already usable: a transparent animated desktop pet, native tray integration, live Gateway streaming, dynamic identity, state-driven reactions, and synchronized chat history. Expect the UI, settings, packaging, and pet ecosystem to grow from here.
 
 ## Credits
 

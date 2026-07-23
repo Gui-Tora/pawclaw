@@ -10,10 +10,11 @@ function assetUrl(petId: string, source: string): string {
 interface PetRendererProps {
   manifest: PetManifest;
   mood: PetMood;
-  onDoubleClick(): void;
+  onDoubleClick?(): void;
+  size?: number;
 }
 
-export function PetRenderer({ manifest, mood, onDoubleClick }: PetRendererProps) {
+export function PetRenderer({ manifest, mood, onDoubleClick, size }: PetRendererProps) {
   const state = animationForMood(mood);
   const animation = manifest.animations[state] ?? manifest.animations.idle;
   const [frame, setFrame] = useState(0);
@@ -35,8 +36,9 @@ export function PetRenderer({ manifest, mood, onDoubleClick }: PetRendererProps)
     return () => window.clearInterval(interval);
   }, [animation]);
 
-  const frameWidth = animation.frameWidth * manifest.scale;
-  const frameHeight = animation.frameHeight * manifest.scale;
+  const scale = size ? size / Math.max(animation.frameWidth, animation.frameHeight) : manifest.scale;
+  const frameWidth = animation.frameWidth * scale;
+  const frameHeight = animation.frameHeight * scale;
   const sheetWidth = frameWidth * animation.frames;
   const imageStyle: CSSProperties = {
     width: sheetWidth,

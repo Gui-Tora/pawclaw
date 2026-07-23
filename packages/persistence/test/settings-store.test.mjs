@@ -17,8 +17,8 @@ describe('SettingsStore', () => {
   });
 
   it('persists valid partial updates', async () => {
-    const saved = await store.update({ activePetId: 'sol', alwaysOnTop: false });
-    assert.deepEqual(saved, { activePetId: 'sol', alwaysOnTop: false });
+    const saved = await store.update({ activePetId: 'ember', alwaysOnTop: false });
+    assert.deepEqual(saved, { activePetId: 'ember', alwaysOnTop: false });
     assert.deepEqual(JSON.parse(await readFile(path, 'utf8')), saved);
   });
 

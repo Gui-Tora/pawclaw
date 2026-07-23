@@ -6,7 +6,10 @@ export interface PetSettings {
   alwaysOnTop: boolean;
 }
 
-export const defaultSettings: PetSettings = { activePetId: 'ember', alwaysOnTop: true };
+export const defaultSettings: PetSettings = {
+  activePetId: 'sol',
+  alwaysOnTop: true
+};
 
 const petIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 

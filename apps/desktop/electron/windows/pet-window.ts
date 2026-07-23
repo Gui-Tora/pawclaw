@@ -30,6 +30,7 @@ export function createPetWindow(alwaysOnTop: boolean): BrowserWindow {
       sandbox: true
     }
   });
+
   alwaysOnTopPreferences.set(window, alwaysOnTop);
   const reinforce = () => reinforcePetAlwaysOnTop(window);
   window.on('show', reinforce);
@@ -41,7 +42,9 @@ export function createPetWindow(alwaysOnTop: boolean): BrowserWindow {
   window.on('closed', () => alwaysOnTopPreferences.delete(window));
   window.once('ready-to-show', reinforce);
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  void window.loadFile(join(import.meta.dirname, '../../renderer/index.html'), { query: { view: 'pet' } });
+  void window.loadFile(join(import.meta.dirname, '../../renderer/index.html'), {
+    query: { view: 'pet' }
+  });
   applyPetAlwaysOnTop(window, alwaysOnTop);
   return window;
 }

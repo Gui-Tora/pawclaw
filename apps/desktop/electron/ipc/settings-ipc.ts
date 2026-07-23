@@ -17,7 +17,9 @@ async function settingsSnapshot(input?: PetSettings) {
   };
 }
 
-export function registerSettingsIpc(onAlwaysOnTopChanged: (enabled: boolean) => void): void {
+export function registerSettingsIpc(
+  onSettingsChanged: (settings: PetSettings, previous: PetSettings) => void
+): void {
   ipcMain.handle('settings:read', () => settingsSnapshot());
   ipcMain.handle('settings:update', async (_event, value: unknown) => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -33,15 +35,17 @@ export function registerSettingsIpc(onAlwaysOnTopChanged: (enabled: boolean) => 
       patch.activePetId = manifest.id;
     }
     if ('alwaysOnTop' in input) {
-      if (typeof input.alwaysOnTop !== 'boolean') throw new Error('Invalid always-on-top setting');
+      if (typeof input.alwaysOnTop !== 'boolean') throw new Error('Invalid always-on-top value');
       patch.alwaysOnTop = input.alwaysOnTop;
     }
     if (Object.keys(patch).length === 0) throw new Error('No supported settings supplied');
 
     const previous = await readAppSettings();
     const settings = await updateAppSettings(patch);
-    if (settings.activePetId !== previous.activePetId) broadcastPetChanged();
-    if (settings.alwaysOnTop !== previous.alwaysOnTop) onAlwaysOnTopChanged(settings.alwaysOnTop);
+    if (settings.activePetId !== previous.activePetId) {
+      broadcastPetChanged();
+    }
+    onSettingsChanged(settings, previous);
     return settingsSnapshot(settings);
   });
 }

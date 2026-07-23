@@ -5,24 +5,29 @@ import { PetRenderer } from './PetRenderer';
 export function PetApp() {
   const [pet, setPet] = useState<{ manifest: PetManifest; mood: PetMood }>();
   const [error, setError] = useState<string>();
+
   useEffect(() => {
     let active = true;
     const loadPet = () => window.openclawPet.getPetStatus()
       .then((status) => {
-        if (active) {
-          setPet(status);
-          setError(undefined);
-        }
+        if (!active) return;
+        setPet(status);
+        setError(undefined);
       })
       .catch((reason: unknown) => {
-        if (active) setError(reason instanceof Error ? reason.message : 'Pet could not be loaded');
+        if (active) setError(reason instanceof Error ? reason.message : 'No se pudo cargar la mascota');
       });
+
     void loadPet();
     const unsubscribeMood = window.openclawPet.onPetMoodChanged((mood) => {
       if (active) setPet((current) => current ? { ...current, mood } : current);
     });
     const unsubscribePet = window.openclawPet.onPetChanged(() => void loadPet());
-    return () => { active = false; unsubscribeMood(); unsubscribePet(); };
+    return () => {
+      active = false;
+      unsubscribeMood();
+      unsubscribePet();
+    };
   }, []);
 
   return (
@@ -33,12 +38,14 @@ export function PetApp() {
           mood={pet.mood}
           onDoubleClick={() => void window.openclawPet.openChat()}
         />
-      ) : <span className="pet-shell__error">{error ?? 'Loading…'}</span>}
+      ) : (
+        <span className="pet-shell__error">{error ?? 'Cargando…'}</span>
+      )}
       <button
-        aria-label="Open settings"
+        aria-label="Abrir ajustes"
         className="pet-shell__settings"
-        title="Settings"
         onClick={() => void window.openclawPet.openSettings()}
+        title="Ajustes"
       >
         ⚙
       </button>

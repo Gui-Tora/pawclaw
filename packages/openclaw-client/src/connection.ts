@@ -20,6 +20,7 @@ interface GatewayFrame {
 
 export interface ChatSendResult {
   accepted: boolean;
+  runId?: string;
   reason?: string;
 }
 
@@ -30,7 +31,46 @@ export interface ChatMessage {
   timestamp?: number;
 }
 
-type ChatEventListener = () => void;
+export interface AgentIdentity {
+  agentId: string;
+  name: string;
+  avatar?: string;
+  emoji?: string;
+}
+
+export type ChatUpdate =
+  | {
+      type: 'delta';
+      runId: string;
+      content: string;
+      timestamp: number;
+    }
+  | {
+      type: 'commentary';
+      runId: string;
+      itemId?: string;
+      content: string;
+      timestamp: number;
+    }
+  | {
+      type: 'final';
+      runId: string;
+      message?: ChatMessage;
+      timestamp: number;
+    }
+  | {
+      type: 'aborted' | 'error';
+      runId: string;
+      message?: ChatMessage;
+      reason?: string;
+      timestamp: number;
+    }
+  | {
+      type: 'history';
+      timestamp: number;
+    };
+
+type ChatEventListener = (update: ChatUpdate) => void;
 type StatusEventListener = (status: GatewayStatus) => void;
 
 function resolveGatewayToken(): string | undefined {
@@ -57,6 +97,8 @@ export class OpenClawConnection {
     reject: (error: Error) => void;
     timeout: ReturnType<typeof setTimeout>;
   }>();
+  private readonly activeRunIds = new Set<string>();
+  private readonly streamTextByRun = new Map<string, string>();
   private readonly chatEventListeners = new Set<ChatEventListener>();
   private readonly statusEventListeners = new Set<StatusEventListener>();
 
@@ -118,8 +160,12 @@ export class OpenClawConnection {
             userAgent: 'pawclaw/0.1.0'
           }).then(() => {
             this.connected = true;
-            this.detail = `Connected to Lyn (${this.sessionKey})`;
+            this.detail = `Connected to OpenClaw (${this.sessionKey})`;
             this.emitStatusUpdate();
+            void this.request('sessions.messages.subscribe', { key: this.sessionKey }).catch(() => {
+              // Chat events still provide live updates on gateways that do not expose
+              // the newer session transcript subscription.
+            });
             finish();
           }).catch((error: unknown) => {
             this.detail = error instanceof Error ? error.message : 'Gateway authentication failed';
@@ -137,7 +183,7 @@ export class OpenClawConnection {
           else pending.reject(new Error(frame.error?.message ?? frame.error?.code ?? 'Gateway request failed'));
           return;
         }
-        if (frame.type === 'event' && this.isChatUpdate(frame)) this.emitChatUpdate();
+        if (frame.type === 'event') this.handleGatewayEvent(frame);
       };
       socket.onerror = () => {
         if (!this.connected) {
@@ -164,12 +210,26 @@ export class OpenClawConnection {
 
   async sendChat(content: string): Promise<ChatSendResult> {
     await this.connect();
-    await this.request('chat.send', {
+    const idempotencyKey = randomUUID();
+    const response = this.getRecord(await this.request('chat.send', {
       sessionKey: this.sessionKey,
       message: content,
-      idempotencyKey: randomUUID()
-    });
-    return { accepted: true };
+      deliver: false,
+      idempotencyKey
+    }));
+    const runId = this.stringValue(response?.runId) ?? idempotencyKey;
+    const status = this.stringValue(response?.status) ?? 'started';
+    if (status === 'error' || status === 'timeout') {
+      return {
+        accepted: false,
+        runId,
+        reason: status === 'timeout'
+          ? 'The agent run ended before the message was accepted.'
+          : 'The gateway could not start the agent run.'
+      };
+    }
+    this.activeRunIds.add(runId);
+    return { accepted: true, runId };
   }
 
   async getChatHistory(limit = 100): Promise<ChatMessage[]> {
@@ -182,6 +242,31 @@ export class OpenClawConnection {
       .filter((message): message is ChatMessage => message !== undefined);
   }
 
+  async getAgentIdentity(): Promise<AgentIdentity> {
+    await this.connect();
+    const response = this.getRecord(await this.request('agent.identity.get', {
+      sessionKey: this.sessionKey
+    }));
+    const agentId = this.stringValue(response?.agentId) ?? this.agentIdFromSessionKey();
+    const name = this.stringValue(response?.name) ?? agentId;
+    const identity: AgentIdentity = {
+      agentId,
+      name,
+      avatar: this.stringValue(response?.avatar),
+      emoji: this.stringValue(response?.emoji)
+    };
+    const detail = `Connected to ${identity.name} (${this.sessionKey})`;
+    if (detail !== this.detail) {
+      this.detail = detail;
+      this.emitStatusUpdate();
+    }
+    return identity;
+  }
+
+  disconnect(): void {
+    this.socket?.close();
+  }
+
   onChatUpdate(listener: ChatEventListener): () => void {
     this.chatEventListeners.add(listener);
     return () => this.chatEventListeners.delete(listener);
@@ -192,8 +277,8 @@ export class OpenClawConnection {
     return () => this.statusEventListeners.delete(listener);
   }
 
-  private emitChatUpdate(): void {
-    for (const listener of this.chatEventListeners) listener();
+  private emitChatUpdate(update: ChatUpdate): void {
+    for (const listener of this.chatEventListeners) listener(update);
   }
 
   private emitStatusUpdate(): void {
@@ -201,27 +286,132 @@ export class OpenClawConnection {
     for (const listener of this.statusEventListeners) listener(status);
   }
 
-  private isChatUpdate(frame: GatewayFrame): boolean {
+  private handleGatewayEvent(frame: GatewayFrame): void {
     if (frame.event === 'chat') {
-      const payload = this.getRecord(frame.payload);
-      return payload?.sessionKey === this.sessionKey && payload.state !== 'delta';
+      this.handleChatEvent(frame.payload);
+      return;
+    }
+    if (frame.event === 'agent' || frame.event === 'session.tool') {
+      this.handleAgentEvent(frame.payload);
+      return;
     }
     if (frame.event === 'session.message') {
       const payload = this.getRecord(frame.payload);
-      return payload?.sessionKey === this.sessionKey;
+      const sessionKey = this.stringValue(payload?.sessionKey) ?? this.stringValue(payload?.key);
+      if (sessionKey === this.sessionKey) {
+        this.emitChatUpdate({ type: 'history', timestamp: Date.now() });
+      }
     }
-    return false;
   }
 
-  private toChatMessage(value: unknown, index: number): ChatMessage | undefined {
+  private handleChatEvent(value: unknown): void {
+    const payload = this.getRecord(value);
+    if (!payload || payload.sessionKey !== this.sessionKey) return;
+    const state = this.stringValue(payload.state);
+    const runId = this.stringValue(payload.runId);
+    if (!runId || !state) return;
+    const timestamp = Date.now();
+    this.activeRunIds.add(runId);
+
+    if (state === 'delta') {
+      const current = this.streamTextByRun.get(runId);
+      const content = this.applyStreamDelta(current, payload);
+      if (content !== undefined) {
+        this.streamTextByRun.set(runId, content);
+        this.emitChatUpdate({ type: 'delta', runId, content, timestamp });
+      }
+      return;
+    }
+
+    const message = this.toChatMessage(payload.message, 0, `stream-${runId}`);
+    this.streamTextByRun.delete(runId);
+    this.activeRunIds.delete(runId);
+    if (state === 'final') {
+      this.emitChatUpdate({ type: 'final', runId, message, timestamp });
+      return;
+    }
+    if (state === 'aborted' || state === 'error') {
+      this.emitChatUpdate({
+        type: state,
+        runId,
+        message,
+        reason: this.stringValue(payload.errorMessage) ?? this.stringValue(payload.stopReason),
+        timestamp
+      });
+    }
+  }
+
+  private handleAgentEvent(value: unknown): void {
+    const payload = this.getRecord(value);
+    if (!payload || payload.stream !== 'item') return;
+    const runId = this.stringValue(payload.runId);
+    const data = this.getRecord(payload.data);
+    const sessionKey = this.stringValue(payload.sessionKey) ?? this.stringValue(data?.sessionKey);
+    if (!runId || (sessionKey !== this.sessionKey && !this.activeRunIds.has(runId))) return;
+    if (data?.kind !== 'preamble') return;
+    const content = this.visibleProgressText(data.progressText);
+    const itemId = this.stringValue(data.itemId) ?? this.stringValue(data.id);
+    if (!content && !itemId) return;
+    this.emitChatUpdate({
+      type: 'commentary',
+      runId,
+      itemId,
+      content,
+      timestamp: typeof payload.ts === 'number' ? payload.ts : Date.now()
+    });
+  }
+
+  private applyStreamDelta(current: string | undefined, payload: Record<string, unknown>): string | undefined {
+    const messageText = this.messageText(payload.message);
+    const deltaText = typeof payload.deltaText === 'string' ? payload.deltaText : undefined;
+    if (deltaText !== undefined) {
+      if (payload.replace === true) return deltaText;
+      if (current === undefined) return messageText ?? deltaText;
+      if (messageText !== undefined) {
+        const prefixLength = messageText.length - deltaText.length;
+        if (prefixLength !== current.length || messageText.slice(0, prefixLength) !== current) {
+          return messageText;
+        }
+      }
+      return `${current}${deltaText}`;
+    }
+    return messageText;
+  }
+
+  private messageText(value: unknown): string | undefined {
+    const record = this.getRecord(value);
+    if (!record) return undefined;
+    const content = this.textContent(record.content)
+      || (typeof record.text === 'string' ? record.text.trim() : '');
+    return content || undefined;
+  }
+
+  private visibleProgressText(value: unknown): string {
+    if (typeof value !== 'string') return '';
+    const text = value.trim();
+    const unwrapped = text.replace(/^[\s*_`~]+|[\s*_`~]+$/gu, '').trim();
+    return /^NO_REPLY$/iu.test(unwrapped) ? '' : text;
+  }
+
+  private agentIdFromSessionKey(): string {
+    const match = /^agent:([^:]+):/.exec(this.sessionKey);
+    return match?.[1] ?? 'main';
+  }
+
+  private toChatMessage(value: unknown, index: number, fallbackId?: string): ChatMessage | undefined {
     const record = this.getRecord(value);
     const rawMessage = this.getRecord(record?.message) ?? record;
     if (!rawMessage) return undefined;
     const role = rawMessage?.role;
     if (role !== 'user' && role !== 'assistant') return undefined;
-    const content = this.textContent(rawMessage.content);
+    const content = this.textContent(rawMessage.content)
+      || (typeof rawMessage.text === 'string' ? rawMessage.text.trim() : '');
     if (!content) return undefined;
-    const id = typeof record?.id === 'string' ? record.id : typeof rawMessage.id === 'string' ? rawMessage.id : `${role}-${index}-${content.slice(0, 24)}`;
+    const id = typeof record?.id === 'string'
+      ? record.id
+      : typeof rawMessage.id === 'string'
+        ? rawMessage.id
+        : fallbackId ?? `${role}-${index}-${content.slice(0, 24)}`;
     const timestamp = typeof rawMessage.timestamp === 'number' ? rawMessage.timestamp : typeof record?.timestamp === 'number' ? record.timestamp : undefined;
     return { id, role, content, timestamp };
   }
@@ -245,6 +435,10 @@ export class OpenClawConnection {
     if (!property) return record;
     const nested = record[property];
     return nested && typeof nested === 'object' && !Array.isArray(nested) ? nested as Record<string, unknown> : undefined;
+  }
+
+  private stringValue(value: unknown): string | undefined {
+    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
   }
 
   private request(method: string, params: Record<string, unknown>): Promise<unknown> {

@@ -13,15 +13,33 @@ contextBridge.exposeInMainWorld('openclawPet', {
     return () => ipcRenderer.removeListener('pet:changed', handler);
   },
   getGatewayStatus: () => ipcRenderer.invoke('openclaw:status'),
+  onGatewayStatusChanged: (listener: (status: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, status: unknown) => listener(status);
+    ipcRenderer.on('openclaw:status-changed', handler);
+    return () => ipcRenderer.removeListener('openclaw:status-changed', handler);
+  },
+  getAgentIdentity: () => ipcRenderer.invoke('openclaw:identity'),
   getSettings: () => ipcRenderer.invoke('settings:read'),
-  updateSettings: (patch: { activePetId?: string; alwaysOnTop?: boolean }) => ipcRenderer.invoke('settings:update', patch),
+  updateSettings: (patch: { activePetId?: string; alwaysOnTop?: boolean }) =>
+    ipcRenderer.invoke('settings:update', patch),
   sendChat: (content: string) => ipcRenderer.invoke('chat:send', content),
   getChatHistory: () => ipcRenderer.invoke('chat:history'),
-  onChatUpdated: (listener: () => void) => {
-    const handler = () => listener();
+  onChatUpdated: (listener: (update: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, update: unknown) => listener(update);
     ipcRenderer.on('chat:updated', handler);
     return () => ipcRenderer.removeListener('chat:updated', handler);
   },
   openChat: () => ipcRenderer.invoke('window:open-chat'),
-  openSettings: () => ipcRenderer.invoke('window:open-settings')
+  openSettings: () => ipcRenderer.invoke('window:open-settings'),
+  hideFlyout: () => ipcRenderer.invoke('window:hide'),
+  onFlyoutShown: (listener: () => void) => {
+    const handler = () => listener();
+    ipcRenderer.on('window:shown', handler);
+    return () => ipcRenderer.removeListener('window:shown', handler);
+  },
+  onFlyoutViewChanged: (listener: (view: 'chat' | 'settings') => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, view: 'chat' | 'settings') => listener(view);
+    ipcRenderer.on('window:view-changed', handler);
+    return () => ipcRenderer.removeListener('window:view-changed', handler);
+  }
 });
